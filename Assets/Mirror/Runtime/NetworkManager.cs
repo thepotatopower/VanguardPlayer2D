@@ -16,6 +16,7 @@ namespace Mirror
     [HelpURL("https://mirror-networking.com/docs/Articles/Components/NetworkManager.html")]
     public class NetworkManager : MonoBehaviour
     {
+        public GameObject CardFightManager;
         /// <summary>Enable to keep NetworkManager alive when changing scenes.</summary>
         // This should be set if your game has a single NetworkManager that exists for the lifetime of the process. If there is a NetworkManager in each scene, then this should not be set.</para>
         [Header("Configuration")]
@@ -1221,6 +1222,13 @@ namespace Mirror
             // => appending the connectionId is WAY more useful for debugging!
             player.name = $"{playerPrefab.name} [connId={conn.connectionId}]";
             NetworkServer.AddPlayerForConnection(conn, player);
+            if (numPlayers == 2)
+            {
+                Debug.Log("spawning");
+                GameObject newCardFightManager = Instantiate(spawnPrefabs.Find(prefab => prefab.name == "CardFightManager"));
+                newCardFightManager.name = "CardFightManager";
+                NetworkServer.Spawn(newCardFightManager);
+            }
         }
 
         [Obsolete("OnServerError was removed because it hasn't been used in a long time.")]

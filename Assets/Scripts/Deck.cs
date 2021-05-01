@@ -3,22 +3,25 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using VanguardEngine;
+using Mirror;
 
-public class Deck : MonoBehaviour
+public class Deck : NetworkBehaviour
 {
+    public PlayerManager playerManager;
     public Text deckCount;
     public List<Card> deck;
-    void Start()
-    {
-        
-    }
 
     // Update is called once per frame
     void Update()
     {
-        if (deck != null)
-        {
-            deckCount.text = deck.Count.ToString();
-        }
+        //if (deck != null)
+        //{
+        //    deckCount.text = deck.Count.ToString();
+        //}
+    }
+
+    public void UpdateCount(int count)
+    {
+        deckCount.text = count.ToString();
     }
 }
