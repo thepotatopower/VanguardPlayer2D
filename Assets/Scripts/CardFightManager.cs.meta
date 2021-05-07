@@ -3,7 +3,20 @@ guid: 13fc21fa9e15ab047a7e83556d0a0c54
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - Field: {instanceID: 0}
+  - PlayerHand: {instanceID: 0}
+  - EnemyHand: {instanceID: 0}
+  - cardPrefab: {fileID: 7038585139010418014, guid: b33fbce7b74b99f4c9eac8eb6d010ca6, type: 3}
+  - DeckZone: {instanceID: 0}
+  - HandCard: {instanceID: 0}
+  - cardBehavior: {instanceID: 0}
+  - PlayerDeckZone: {instanceID: 0}
+  - EnemyDeckZone: {instanceID: 0}
+  - playerManager: {instanceID: 0}
+  - InputManager: {instanceID: 0}
+  - host: {instanceID: 0}
+  - remote: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

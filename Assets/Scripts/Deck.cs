@@ -10,6 +10,7 @@ public class Deck : NetworkBehaviour
     public PlayerManager playerManager;
     public Text deckCount;
     public List<Card> deck;
+    int _count = 0;
 
     // Update is called once per frame
     void Update()
@@ -22,6 +23,13 @@ public class Deck : NetworkBehaviour
 
     public void UpdateCount(int count)
     {
-        deckCount.text = count.ToString();
+        _count = count;
+        deckCount.text = _count.ToString();
+    }
+
+    public void CountChange(int count)
+    {
+        _count += count;
+        deckCount.text = _count.ToString();
     }
 }

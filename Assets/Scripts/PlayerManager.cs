@@ -4,6 +4,7 @@ using UnityEngine;
 using Mirror;
 using VanguardEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 
 public class PlayerManager : NetworkBehaviour
 {
@@ -26,7 +27,7 @@ public class PlayerManager : NetworkBehaviour
     public override void OnStartClient()
     {
         base.OnStartClient();
-        Debug.Log("here");
+        this.name = "PlayerManager";
         PlayerDeckZone = GameObject.Find("PlayerDeckZone");
         EnemyDeckZone = GameObject.Find("EnemyDeckZone");
         PlayerHand = GameObject.Find("PlayerHand");
@@ -76,42 +77,52 @@ public class PlayerManager : NetworkBehaviour
             vim.player1_input = input;
         else
             vim.player2_input = input;
+        Debug.Log("Player: " + player + " Input: " + input);
         vim.numResponses++;
+        Debug.Log("numResponses: " + vim.numResponses.ToString());
         if (vim.numResponses == 2)
         {
-            vim.numResponses = 0;
-            vim.inputSignal = 0;
             RpcResetReceive();
+        }
+    }
+
+    [Command]
+    public void CmdChangeInputs(List<int> inputs)
+    {
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        foreach (int input in inputs)
+            vim.inputs.Add(input);
+        vim.numResponses = 2;
+        RpcResetReceive();
+    }
+
+    [Command]
+    public void CmdSingleInput(int selection)
+    {
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        vim.player1_input = selection;
+        vim.numResponses = 2;
+        RpcResetReceive();
+    }
+
+    [Command]
+    public void CmdReady()
+    {
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        vim.numResponses--;
+        Debug.Log("numResponses: " + vim.numResponses.ToString());
+        if (vim.numResponses == 0)
+        {
+            Debug.Log("ready to continue");
+            vim.readyToContinue = true;
         }
     }
 
     [ClientRpc]
     public void RpcResetReceive()
     {
-        inputManager.GetComponent<VisualInputManager>().receivedInput = false;
-        inputManager.GetComponent<VisualInputManager>().readyToContinue = true;
-    }
-
-    [Command]
-    public void CmdDraw()
-    {
-        Card drawnCard = cardFight._player1._field.PlayerDeck[0];
-        cardFight._player1._field.PlayerDeck.RemoveAt(0);
-        cardFight._player2._field.EnemyDeck.RemoveAt(0);
-        GameObject card = Instantiate(cardPrefab, new Vector2(0, 0), Quaternion.identity);
-        RpcDraw(card, drawnCard);
-    }
-
-    [ClientRpc]
-    public void RpcDraw(GameObject card, Card drawnCard)
-    {
-        if (hasAuthority)
-        {
-            card.transform.SetParent(PlayerHand.transform, false);
-            card.GetComponent<Image>().sprite = LoadSprite(FixFileName(drawnCard.id));
-        }
-        else
-            card.transform.SetParent(EnemyHand.transform, false);
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        vim.ResetReceive();
     }
 
     // Update is called once per frame

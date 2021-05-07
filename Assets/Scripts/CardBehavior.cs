@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using VanguardEngine;
 
 public class CardBehavior : MonoBehaviour
@@ -8,43 +9,156 @@ public class CardBehavior : MonoBehaviour
     public GameObject Card;
     public GameObject PlayerHand;
     public GameObject HandCard;
-    Vector3 position, rotation, scale;
+    public GameObject selectedCardPrefab;
+    public GameObject selectedCard;
+    public CardFightManager cardFightManager;
+    public VisualInputManager inputManager;
+    public GameObject ZoomIn;
+    public Camera cam;
+    public Canvas canvas;
+    public Text CardName;
+    public Text CardEffect;
+    public Card card;
+    public string cardID;
+    public bool faceup = false;
+    public int layer = 0;
+    public bool selected = false;
+    public IEnumerator coroutine;
+    Vector3 position, rotation, scale, originalPosition;
 
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
     void Update()
     {
 
     }
 
-    public void DrawCard(string tempID)
+    void Start()
     {
-        StartCoroutine(RotateImage());
+        cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
+        inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
+        ZoomIn = GameObject.Find("ZoomIn");
+        CardName = GameObject.Find("CardName").GetComponent<Text>();
+        CardEffect = GameObject.Find("CardEffect").GetComponent<Text>();
+        PlayerHand = GameObject.Find("PlayerHand");
+        cam = GameObject.Find("MainCamera").GetComponent<Camera>();
+        canvas = GameObject.Find("MainCanvas").GetComponent<Canvas>();
     }
 
-    IEnumerator RotateImage()
+    public void DisplayCard()
     {
-        float moveSpeed = 0.3f;
-        float y = 180;
-        //position = Card.transform.localPosition;
-        //rotation = Card.transform.localRotation.eulerAngles;
-        //scale = Card.transform.localScale;
-        //Card.transform.parent = PlayerHand.transform;
-        //Card.transform.localPosition = position;
-        //Card.transform.localRotation = Quaternion.Euler(rotation.x, rotation.y, rotation.z);
-        //Card.transform.localScale = new Vector3(0.7f, 1, 0.01f);
-        Card.transform.SetParent(HandCard.transform);
-        while (Card.transform.localRotation.eulerAngles != HandCard.transform.localRotation.eulerAngles)
+        Card card;
+        string effect;
+        if (originalPosition == new Vector3(0, 0, 0))
+            originalPosition = this.transform.position;
+        if (this.faceup)
         {
-            Card.transform.localRotation = Quaternion.Slerp(Card.transform.localRotation, Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z), moveSpeed * Time.time);
-            Card.transform.localPosition = Vector3.MoveTowards(Card.transform.localPosition, HandCard.transform.localPosition, Time.time * moveSpeed);
+            ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
+            card = cardFightManager.LookUpCard(cardID);
+            CardName.text = card.name;
+            effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
+            CardEffect.text = effect;
+        }
+        if (this.transform.parent.name == "PlayerHand")
+        {
+            //this.transform.localScale *= 3;
+            if (coroutine != null)
+                StopCoroutine(coroutine);
+            coroutine = HoverCard(true);
+            StartCoroutine(coroutine);
+        }
+    }
+
+    public void RevertCard()
+    {
+        if (this.transform.parent.name == "PlayerHand")
+        {
+            //this.transform.localScale /= 3;
+            if (coroutine != null)
+                StopCoroutine(coroutine);
+            coroutine = HoverCard(false);
+            StartCoroutine(coroutine);
+        }
+    }
+
+    public void ClickCard()
+    {
+        if (this.transform.parent.name == "PlayerHand")
+        {
+            GridLayout gridLayout = PlayerHand.GetComponent<GridLayout>();
+            if (inputManager.cardsAreSelectable)
+            {
+                Debug.Log("clicked");
+                if (selected)
+                {
+                    GameObject.Destroy(selectedCard);
+                    selected = false;
+                }
+                else
+                {
+                    selectedCard = GameObject.Instantiate(selectedCardPrefab);
+                    selectedCard.transform.position = this.transform.position;
+                    selectedCard.transform.SetParent(GameObject.Find("Field").transform);
+                    selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
+                    selected = true;
+                }
+            }
+        }
+    }
+
+    IEnumerator HoverCard(bool up)
+    {
+        float direction = 0;
+        if (up)
+        {
+            direction = PlayerHand.transform.position.y + (ConvertToUnits(RectTransformUtility.PixelAdjustRect(this.GetComponent<RectTransform>(), canvas).height) * 0.15f);
+        }
+        else
+        {
+            if (originalPosition != null)
+                direction = originalPosition.y;
+        }
+        Vector3 newPosition = new Vector3(this.transform.position.x, direction, 0);
+        float step = 2000 * Time.deltaTime;
+        while (Vector3.Distance(this.transform.position, newPosition) > 0.001f)
+        {
+            this.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
+            if (selectedCard != null)
+                selectedCard.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
             yield return null;
         }
-        Card.transform.localRotation = Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z);
-        yield return null;
+        this.transform.position = newPosition;
     }
+
+    float ConvertToUnits(float p)
+    {
+        float ortho = cam.orthographicSize;
+        float pixelH = cam.pixelHeight;
+        return (p * ortho * 2) / pixelH;
+    }
+
+    //public void DrawCard(string tempID)
+    //{
+    //    StartCoroutine(RotateImage());
+    //}
+
+    //IEnumerator RotateImage()
+    //{
+    //    float moveSpeed = 0.3f;
+    //    float y = 180;
+    //    position = Card.transform.localPosition;
+    //    rotation = Card.transform.localRotation.eulerAngles;
+    //    scale = Card.transform.localScale;
+    //    Card.transform.parent = PlayerHand.transform;
+    //    Card.transform.localPosition = position;
+    //    Card.transform.localRotation = Quaternion.Euler(rotation.x, rotation.y, rotation.z);
+    //    Card.transform.localScale = new Vector3(0.7f, 1, 0.01f);
+    //    Card.transform.SetParent(HandCard.transform);
+    //    while (Card.transform.localRotation.eulerAngles != HandCard.transform.localRotation.eulerAngles)
+    //    {
+    //        Card.transform.localRotation = Quaternion.Slerp(Card.transform.localRotation, Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z), moveSpeed * Time.time);
+    //        Card.transform.localPosition = Vector3.MoveTowards(Card.transform.localPosition, HandCard.transform.localPosition, Time.time * moveSpeed);
+    //        yield return null;
+    //    }
+    //    Card.transform.localRotation = Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z);
+    //    yield return null;
+    //}
 }

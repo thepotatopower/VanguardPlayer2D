@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 7038585139010417984}
   - component: {fileID: 1550321616126771683}
   - component: {fileID: -1254620735540709838}
+  - component: {fileID: -1055663920977577506}
+  - component: {fileID: -5022432159067471987}
   m_Layer: 5
   m_Name: Card
   m_TagString: Untagged
@@ -37,7 +39,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 242.65, y: -136.24}
-  m_SizeDelta: {x: 62.03, y: 85.78}
+  m_SizeDelta: {x: 62, y: 86}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7038585139010417985
 CanvasRenderer:
@@ -115,3 +117,92 @@ MonoBehaviour:
   compressRotation: 0
   interpolateScale: 1
   syncScale: 1
+--- !u!114 &-1055663920977577506
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7038585139010418014}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e273ef3b09a5f1468e60b4c6497b6c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Card: {fileID: 7038585139010418014}
+  PlayerHand: {fileID: 0}
+  HandCard: {fileID: 0}
+  selectedCardPrefab: {fileID: 7796248888685273378, guid: b5ba3d20f9a94744085ddb23bd0bb9df, type: 3}
+  selectedCard: {fileID: 0}
+  cardFightManager: {fileID: 0}
+  inputManager: {fileID: 0}
+  ZoomIn: {fileID: 3460729395543957449, guid: de939020b5e2aa5489ebcc4002d75d54, type: 3}
+  cam: {fileID: 0}
+  canvas: {fileID: 0}
+  CardName: {fileID: 0}
+  CardEffect: {fileID: 0}
+  cardID: 
+  faceup: 0
+  layer: 0
+  selected: 0
+--- !u!114 &-5022432159067471987
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7038585139010418014}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Delegates:
+  - eventID: 0
+    callback:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -1055663920977577506}
+          m_TargetAssemblyTypeName: CardBehavior, Assembly-CSharp
+          m_MethodName: DisplayCard
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 1
+  - eventID: 1
+    callback:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -1055663920977577506}
+          m_TargetAssemblyTypeName: CardBehavior, Assembly-CSharp
+          m_MethodName: RevertCard
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 1
+  - eventID: 4
+    callback:
+      m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: -1055663920977577506}
+          m_TargetAssemblyTypeName: CardBehavior, Assembly-CSharp
+          m_MethodName: ClickCard
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 1

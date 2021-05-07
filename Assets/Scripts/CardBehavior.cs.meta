@@ -3,7 +3,19 @@ guid: 6e273ef3b09a5f1468e60b4c6497b6c6
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - Card: {instanceID: 0}
+  - PlayerHand: {instanceID: 0}
+  - HandCard: {instanceID: 0}
+  - selectedCardPrefab: {fileID: 7796248888685273378, guid: b5ba3d20f9a94744085ddb23bd0bb9df, type: 3}
+  - selectedCard: {instanceID: 0}
+  - cardFightManager: {instanceID: 0}
+  - visualInputManager: {instanceID: 0}
+  - ZoomIn: {instanceID: 0}
+  - cam: {instanceID: 0}
+  - canvas: {instanceID: 0}
+  - CardName: {instanceID: 0}
+  - CardEffect: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

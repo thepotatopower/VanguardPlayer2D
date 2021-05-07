@@ -11,6 +11,5 @@ public class DrawOnClick : NetworkBehaviour
     {
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
-        playerManager.CmdDraw();
     }
 }
