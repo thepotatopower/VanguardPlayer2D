@@ -16,10 +16,14 @@ public class CardFightManager : NetworkBehaviour
     public GameObject EnemyHand;
     public GameObject cardPrefab;
     public GameObject DeckZone;
+    public GameObject PlayerDropZone;
+    public GameObject EnemyDropZone;
     public GameObject HandCard;
     public CardBehavior cardBehavior;
     public GameObject PlayerDeckZone;
+    public GameObject PlayerRideDeckZone;
     public GameObject EnemyDeckZone;
+    public GameObject EnemyRideDeckZone;
     public List<Card> playerDeck;
     public List<Card> enemyDeck;
     public PlayerManager playerManager;
@@ -41,7 +45,11 @@ public class CardFightManager : NetworkBehaviour
     {
         this.name = "CardFightManager";
         PlayerDeckZone = GameObject.Find("PlayerDeck");
+        PlayerRideDeckZone = GameObject.Find("PlayerRideDeck");
+        PlayerDropZone = GameObject.Find("PlayerDropZone");
+        EnemyDropZone = GameObject.Find("EnemyDropZone");
         EnemyDeckZone = GameObject.Find("EnemyDeck");
+        EnemyRideDeckZone = GameObject.Find("EnemyRideDeck");
         PlayerHand = GameObject.Find("PlayerHand");
         EnemyHand = GameObject.Find("EnemyHand");
         Field = GameObject.Find("Field");
@@ -87,7 +95,14 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnDraw += PerformDraw;
         cardFight._player1.OnReturnCardFromHandToDeck += PerformHandToDeck;
         cardFight._player2.OnReturnCardFromHandToDeck += PerformHandToDeck;
+        cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
+        cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
+        cardFight._player1.OnDiscard += PerformDiscard;
+        cardFight._player2.OnDiscard += PerformDiscard;
+        cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
+        //cardFight._player2.OnStandUpVanguard += PerformStandUpVanguard;
         RpcInitializeDecks(cardFight._player1.PlayerDeckCount(), cardFight._player2.PlayerDeckCount());
+        RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
         Debug.Log("cardfight started");
     }
@@ -106,12 +121,41 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("server setting up decks");
             PlayerDeckZone.GetComponent<Deck>().UpdateCount(player1_count);
             EnemyDeckZone.GetComponent<Deck>().UpdateCount(player2_count);
+            PlayerRideDeckZone.GetComponent<Deck>().UpdateCount(3);
+            EnemyRideDeckZone.GetComponent<Deck>().UpdateCount(3);
         }
         else
         {
             Debug.Log("client setting up decks");
             PlayerDeckZone.GetComponent<Deck>().UpdateCount(player2_count);
             EnemyDeckZone.GetComponent<Deck>().UpdateCount(player1_count);
+            PlayerRideDeckZone.GetComponent<Deck>().UpdateCount(3);
+            EnemyRideDeckZone.GetComponent<Deck>().UpdateCount(3);
+        }
+        PlayerDropZone.GetComponent<Deck>().UpdateCount(0);
+        EnemyDropZone.GetComponent<Deck>().UpdateCount(0);
+    }
+
+    [ClientRpc]
+    public void RpcPlaceStarter(string cardID1, int tempID1, string cardID2, int tempID2)
+    {
+        Card card1 = LookUpCard(cardID1);
+        Card card2 = LookUpCard(cardID2);
+        GameObject Card1 = GameObject.Instantiate(cardPrefab);
+        GameObject Card2 = GameObject.Instantiate(cardPrefab);
+        Card1.name = tempID1.ToString();
+        Card2.name = tempID2.ToString();
+        if (isServer)
+        {
+            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card1.grade, 0, card1.critical, card1.power, true, false, cardID1, Card1);
+            Card2.transform.Rotate(new Vector3(180, 0, 0));
+            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card2.grade, 0, card2.critical, card2.power, true, false, cardID2, Card2);
+        }
+        else
+        {
+            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card2.grade, 0, card2.critical, card2.power, true, false, cardID2, Card2);
+            Card1.transform.Rotate(new Vector3(180, 0, 0));
+            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card1.grade, 0, card1.critical, card1.power, true, false, cardID1, Card1);
         }
     }
 
@@ -231,7 +275,7 @@ public class CardFightManager : NetworkBehaviour
             card.transform.position = EnemyDeckZone.transform.position;
             EnemyDeckZone.GetComponent<Deck>().CountChange(-1);
         }
-        float step = 5 * Time.deltaTime;
+        float step = 2000 * Time.deltaTime;
         while (Vector3.Distance(card.transform.position, blankCard.transform.position) > 0.001f)
         {
             card.transform.position = Vector3.MoveTowards(card.transform.position, blankCard.transform.position, step);
@@ -247,13 +291,14 @@ public class CardFightManager : NetworkBehaviour
 
     IEnumerator MoveFromHandToDeck(GameObject card, bool player)
     {
+        while (inAnimation)
+            yield return null;
+        inAnimation = true;
+        inputManager.cardsAreHoverable = false;
         GameObject target;
         GameObject newCard = GameObject.Instantiate(cardPrefab);
         newCard.transform.position = card.transform.position;
         newCard.transform.SetParent(Field.transform);
-        while (inAnimation)
-            yield return null;
-        inAnimation = true;
         if (player)
         {
             newCard.GetComponent<Image>().sprite = card.GetComponent<Image>().sprite;
@@ -264,8 +309,10 @@ public class CardFightManager : NetworkBehaviour
         {
             target = EnemyDeckZone;
         }
+
+        card.transform.SetParent(null);
         GameObject.Destroy(card);
-        float step = 5 * Time.deltaTime;
+        float step = 2000 * Time.deltaTime;
         while (Vector3.Distance(newCard.transform.position, target.transform.position) > 0.001f)
         {
             newCard.transform.position = Vector3.MoveTowards(newCard.transform.position, target.transform.position, step);
@@ -274,6 +321,148 @@ public class CardFightManager : NetworkBehaviour
         GameObject.Destroy(newCard);
         target.GetComponent<Deck>().CountChange(1);
         inAnimation = false;
+        inputManager.cardsAreHoverable = true;
+    }
+
+    public void PerformStandUpVanguard(object sender, CardEventArgs e)
+    {
+        RpcStandUpVanguard();
+    }
+
+    [ClientRpc]
+    public void RpcStandUpVanguard()
+    {
+        StartCoroutine(WaitForFlip());
+    }
+
+    IEnumerator WaitForFlip()
+    {
+        while (inAnimation)
+            yield return null;
+        inAnimation = true;
+        StartCoroutine(inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().Flip());
+        StartCoroutine(inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().Flip());
+        while (inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().inAnimation)
+            yield return null;
+        inAnimation = false;
+    }
+
+    public void PerformRideFromRideDeck(object sender, CardEventArgs e)
+    {
+        Debug.Log("Riding " + e.card.name);
+        RpcRideFromRideDeck(e.playerID, e.card.id);
+    }
+
+    [ClientRpc]
+    public void RpcRideFromRideDeck(int playerID, string cardID)
+    {
+        bool player;
+        GameObject RideDeck;
+        GameObject VG;
+        GameObject newVG = GameObject.Instantiate(cardPrefab);
+        newVG.GetComponent<CardBehavior>().faceup = true;
+        newVG.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
+        newVG.GetComponent<CardBehavior>().card = LookUpCard(cardID);
+        if (isPlayerAction(playerID))
+        {
+            player = true;
+            RideDeck = PlayerRideDeckZone;
+            VG = inputManager.PlayerVG;
+        }
+        else
+        {
+            player = false;
+            RideDeck = EnemyRideDeckZone;
+            VG = inputManager.EnemyVG;
+            newVG.transform.Rotate(new Vector3(180, 0, 0));
+        }
+        StartCoroutine(MoveFromRideDeckToVG(newVG, RideDeck, VG));
+    }
+
+    IEnumerator MoveFromRideDeckToVG(GameObject newVG, GameObject RideDeck, GameObject VG)
+    {
+        while (inAnimation)
+            yield return null;
+        inAnimation = true;
+        newVG.transform.SetParent(Field.transform);
+        newVG.transform.position = RideDeck.transform.position;
+        float step = 2000 * Time.deltaTime;
+        while (Vector3.Distance(newVG.transform.position, VG.transform.position) > 0.01f)
+        {
+            newVG.transform.position = Vector3.MoveTowards(newVG.transform.position, VG.transform.position, step);
+            yield return null;
+        }
+        Card card = newVG.GetComponent<CardBehavior>().card;
+        VG.GetComponent<UnitSlotBehavior>().AddCard(card.grade, VG.GetComponent<UnitSlotBehavior>()._soul + 1, card.critical, card.power, true, true, card.id, newVG);
+        RideDeck.GetComponent<Deck>().CountChange(-1);
+        inAnimation = false;
+    }
+
+    public void PerformDiscard(object sender, CardEventArgs e)
+    {
+        foreach (Card card in e.cardList)
+        {
+            RpcDiscard(card.tempID, card.id, e.playerID);
+        }
+    }
+
+    [ClientRpc]
+    public void RpcDiscard(int tempID, string cardID, int playerID)
+    {
+        bool player;
+        GameObject target;
+        if (isPlayerAction(playerID))
+        {
+            player = true;
+            target = PlayerHand;
+        }
+        else
+        {
+            player = false;
+            target = EnemyHand;
+        }
+        for (int i = 0; i < target.transform.childCount; i++)
+        {
+            if (int.Parse(target.transform.GetChild(i).name) == tempID)
+            {
+                StartCoroutine(MoveFromHandToDrop(target.transform.GetChild(i).gameObject, cardID, player));
+            }
+        }
+    }
+
+    IEnumerator MoveFromHandToDrop(GameObject card, string cardID, bool player)
+    {
+        while (inAnimation)
+            yield return null;
+        inAnimation = true;
+        inputManager.cardsAreHoverable = false;
+        GameObject target;
+        GameObject newCard = GameObject.Instantiate(cardPrefab);
+        newCard.transform.position = card.transform.position;
+        newCard.transform.SetParent(Field.transform);
+        if (player)
+        {
+            newCard.GetComponent<Image>().sprite = card.GetComponent<Image>().sprite;
+            GameObject.Destroy(card.GetComponent<CardBehavior>().selectedCard);
+            target = PlayerDropZone;
+        }
+        else
+        {
+            target = EnemyDropZone;
+        }
+        card.transform.SetParent(null);
+        GameObject.Destroy(card);
+        float step = 2000 * Time.deltaTime;
+        while (Vector3.Distance(newCard.transform.position, target.transform.position) > 0.001f)
+        {
+            newCard.transform.position = Vector3.MoveTowards(newCard.transform.position, target.transform.position, step);
+            yield return null;
+        }
+        GameObject.Destroy(newCard);
+        target.GetComponent<Deck>().ChangeSprite(LoadSprite(FixFileName(cardID)));
+        target.GetComponent<Deck>().CountChange(1);
+        inAnimation = false;
+        inputManager.cardsAreHoverable = true;
     }
 
     public static Sprite LoadSprite(string filename)
@@ -302,8 +491,9 @@ public class CardFightManager : NetworkBehaviour
     {
         List<Card> card;
         List<string> _cardID;
+        Debug.Log("looking up " + cardID + "...");
         if (cardDict.ContainsKey(cardID))
-            return cardDict[name];
+            return cardDict[cardID];
         else
         {
             _cardID = new List<string>();
@@ -321,5 +511,33 @@ public class CardFightManager : NetworkBehaviour
         string secondHalf = input.Substring(first + 1, input.Length - (first + 1));
         int second = secondHalf.IndexOf('/');
         return ("../art/" + firstHalf + secondHalf.Substring(0, second) + "_" + secondHalf.Substring(second + 1, secondHalf.Length - (second + 1)) + ".png").ToLower();
+    }
+
+    public void DisplayCard(string cardID)
+    {
+        GameObject ZoomIn = GameObject.Find("ZoomIn");
+        Text CardName = GameObject.Find("CardName").GetComponent<Text>();
+        Text CardEffect = GameObject.Find("CardEffect").GetComponent<Text>();
+        ZoomIn.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
+        Card card = LookUpCard(cardID);
+        CardName.text = card.name;
+        string effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
+        CardEffect.text = effect;
+    }
+
+    public bool isPlayerAction(int playerID)
+    {
+        if (isServer)
+        {
+            if (playerID == 1)
+                return true;
+            return false;
+        }
+        else
+        {
+            if (playerID == 2)
+                return true;
+            return false;
+        }
     }
 }

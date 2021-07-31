@@ -1,0 +1,100 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class UnitSlotBehavior : MonoBehaviour
+{
+    public int _grade;
+    public Text Grade;
+    public int _soul;
+    public Text Soul;
+    public int _critical;
+    public Text Critical;
+    public int _power;
+    public Text Power;
+    public bool _rightup = true;
+    public bool _faceup = true;
+    public string _cardID;
+    public GameObject unit = null;
+    public int slot;
+    public bool inAnimation = false;
+
+    public void AddCard(int grade, int soul, int critical, int power, bool rightup, bool faceup, string cardID, GameObject card)
+    {
+        _grade = grade;
+        _soul = soul;
+        _critical = critical;
+        _power = power;
+        _rightup = rightup;
+        _faceup = faceup;
+        _cardID = cardID;
+        GameObject.Destroy(unit);
+        unit = card;
+        unit.transform.SetParent(this.transform);
+        unit.transform.SetAsFirstSibling();
+        unit.transform.localPosition = new Vector3(0, 0, 0);
+        Grade.text = "G" + _grade;
+        Soul.text = "S:" + _soul;
+        Power.text = _power.ToString();
+        Critical.text = "C:" + _critical;
+        if (_faceup)
+        {
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(_cardID));
+            Grade.enabled = true;
+            Soul.enabled = true;
+            Power.enabled = true;
+            Critical.enabled = true;
+        }
+        else
+        {
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../art/FaceDownCard.jpg");
+            Grade.enabled = false;
+            Soul.enabled = false;
+            Power.enabled = false;
+            Critical.enabled = false;
+        }
+    }
+
+    public IEnumerator Flip()
+    {
+        inAnimation = true;
+        float step = 400 * Time.deltaTime;
+        Quaternion Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y + 90, unit.transform.localRotation.eulerAngles.z);
+        Quaternion Zero = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z);
+        Debug.Log("current: " + unit.transform.localRotation.eulerAngles.ToString());
+        Debug.Log("ninety: " + Ninety.eulerAngles.ToString());
+        Debug.Log("zero: " + Zero.eulerAngles.ToString());
+        while (Quaternion.Angle(unit.transform.localRotation, Ninety) > 0.01f)
+        {
+            unit.transform.localRotation = Quaternion.RotateTowards(unit.transform.localRotation, Ninety, step);
+            yield return null;
+        }
+        unit.transform.localRotation = Ninety;
+        if (_faceup)
+        {
+            _faceup = false;
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../art/FaceDownCard.jpg");
+            Grade.enabled = false;
+            Soul.enabled = false;
+            Power.enabled = false;
+            Critical.enabled = false;
+        }
+        else
+        {
+            _faceup = true;
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(_cardID));
+            Grade.enabled = true;
+            Soul.enabled = true;
+            Power.enabled = true;
+            Critical.enabled = true;
+        }
+        while (Quaternion.Angle(unit.transform.localRotation, Zero) > 0.01f)
+        {
+            unit.transform.localRotation = Quaternion.RotateTowards(unit.transform.localRotation, Zero, step);
+            yield return null;
+        }
+        unit.transform.localRotation = Zero;
+        inAnimation = false;
+    }
+}

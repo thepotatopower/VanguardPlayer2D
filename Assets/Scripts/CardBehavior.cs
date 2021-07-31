@@ -57,7 +57,7 @@ public class CardBehavior : MonoBehaviour
             effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
             CardEffect.text = effect;
         }
-        if (this.transform.parent.name == "PlayerHand")
+        if (this.transform.parent.name == "PlayerHand" && inputManager.cardsAreHoverable)
         {
             //this.transform.localScale *= 3;
             if (coroutine != null)
@@ -69,7 +69,7 @@ public class CardBehavior : MonoBehaviour
 
     public void RevertCard()
     {
-        if (this.transform.parent.name == "PlayerHand")
+        if (this.transform.parent.name == "PlayerHand" && inputManager.cardsAreHoverable)
         {
             //this.transform.localScale /= 3;
             if (coroutine != null)
@@ -96,7 +96,7 @@ public class CardBehavior : MonoBehaviour
                 {
                     selectedCard = GameObject.Instantiate(selectedCardPrefab);
                     selectedCard.transform.position = this.transform.position;
-                    selectedCard.transform.SetParent(GameObject.Find("Field").transform);
+                    selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
                     selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
                     selected = true;
                 }
@@ -106,10 +106,12 @@ public class CardBehavior : MonoBehaviour
 
     IEnumerator HoverCard(bool up)
     {
+        Vector3 oldPosition;
         float direction = 0;
         if (up)
         {
-            direction = PlayerHand.transform.position.y + (ConvertToUnits(RectTransformUtility.PixelAdjustRect(this.GetComponent<RectTransform>(), canvas).height) * 0.15f);
+            //direction = PlayerHand.transform.position.y + (ConvertToUnits(RectTransformUtility.PixelAdjustRect(this.GetComponent<RectTransform>(), canvas).height) * 0.15f);
+            direction = PlayerHand.transform.position.y + this.GetComponent<RectTransform>().rect.height * 0.15f;
         }
         else
         {
@@ -117,12 +119,16 @@ public class CardBehavior : MonoBehaviour
                 direction = originalPosition.y;
         }
         Vector3 newPosition = new Vector3(this.transform.position.x, direction, 0);
-        float step = 2000 * Time.deltaTime;
+        float step = 150 * Time.deltaTime;
         while (Vector3.Distance(this.transform.position, newPosition) > 0.001f)
         {
+            oldPosition = this.transform.position;
             this.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
             if (selectedCard != null)
                 selectedCard.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
+            if (oldPosition == this.transform.position)
+                break;
+            Debug.Log("hovering");
             yield return null;
         }
         this.transform.position = newPosition;
@@ -134,31 +140,4 @@ public class CardBehavior : MonoBehaviour
         float pixelH = cam.pixelHeight;
         return (p * ortho * 2) / pixelH;
     }
-
-    //public void DrawCard(string tempID)
-    //{
-    //    StartCoroutine(RotateImage());
-    //}
-
-    //IEnumerator RotateImage()
-    //{
-    //    float moveSpeed = 0.3f;
-    //    float y = 180;
-    //    position = Card.transform.localPosition;
-    //    rotation = Card.transform.localRotation.eulerAngles;
-    //    scale = Card.transform.localScale;
-    //    Card.transform.parent = PlayerHand.transform;
-    //    Card.transform.localPosition = position;
-    //    Card.transform.localRotation = Quaternion.Euler(rotation.x, rotation.y, rotation.z);
-    //    Card.transform.localScale = new Vector3(0.7f, 1, 0.01f);
-    //    Card.transform.SetParent(HandCard.transform);
-    //    while (Card.transform.localRotation.eulerAngles != HandCard.transform.localRotation.eulerAngles)
-    //    {
-    //        Card.transform.localRotation = Quaternion.Slerp(Card.transform.localRotation, Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z), moveSpeed * Time.time);
-    //        Card.transform.localPosition = Vector3.MoveTowards(Card.transform.localPosition, HandCard.transform.localPosition, Time.time * moveSpeed);
-    //        yield return null;
-    //    }
-    //    Card.transform.localRotation = Quaternion.Euler(HandCard.transform.localRotation.eulerAngles.x, HandCard.transform.localRotation.eulerAngles.y, HandCard.transform.localRotation.eulerAngles.z);
-    //    yield return null;
-    //}
 }

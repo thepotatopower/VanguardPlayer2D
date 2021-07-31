@@ -21,15 +21,20 @@ public class Deck : NetworkBehaviour
         //}
     }
 
-    public void UpdateCount(int count)
+    public void UpdateCount(int count) //change count value
     {
         _count = count;
         deckCount.text = _count.ToString();
     }
 
-    public void CountChange(int count)
+    public void CountChange(int count) //increment count by specific value
     {
         _count += count;
         deckCount.text = _count.ToString();
+    }
+
+    public void ChangeSprite(Sprite sprite)
+    {
+        this.GetComponent<Image>().sprite = sprite;
     }
 }

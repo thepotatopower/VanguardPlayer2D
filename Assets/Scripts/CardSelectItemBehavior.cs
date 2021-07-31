@@ -6,20 +6,23 @@ using UnityEngine.UI;
 public class CardSelectItemBehavior : MonoBehaviour
 {
     VisualInputManager inputManager;
+    CardFightManager cardFightManager;
     CardSelect cardSelect;
+    public string cardID;
     public bool selected = false;
     public Color32 defaultColor;
     
     void Start()
     {
         inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
+        cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
         cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         defaultColor = this.GetComponent<Image>().color;
     }
 
     public void OnPointerEnter()
     {
-        this.transform.GetChild(0).GetComponent<CardBehavior>().DisplayCard();
+        cardFightManager.DisplayCard(cardID);
         if (!selected)
             this.GetComponent<Image>().color = new Color32(195, 243, 250, 255);
     }
