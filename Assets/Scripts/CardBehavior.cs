@@ -28,7 +28,8 @@ public class CardBehavior : MonoBehaviour
 
     void Update()
     {
-
+        if (!inputManager.cardsAreSelectable)
+            GameObject.Destroy(selectedCard);
     }
 
     void Start()

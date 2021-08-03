@@ -49,6 +49,10 @@ public class VisualInputManager : NetworkBehaviour
     public bool readyToContinue = false;
     [SyncVar]
     public bool reversed = false;
+    [SyncVar]
+    public int min = 0;
+    [SyncVar]
+    public string query = "";
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<string> cardIDs = new SyncList<string>();
@@ -176,25 +180,35 @@ public class VisualInputManager : NetworkBehaviour
             oSignalEvent.Set();
         }
 
-        protected override void SelectCardFromRideDeck_Input()
+        protected override void SelectFromList_Input()
         {
             Thread.Sleep(250);
-            inputManager.tempIDs.Clear();
+            inputManager.count = int_value;
+            inputManager.min = int_value2;
+            inputManager.query = _query;
             inputManager.cardIDs.Clear();
-            List<Card> rideDeck = _player1.GetRideableCards(true);
-            foreach (Card card in rideDeck)
+            inputManager.tempIDs.Clear();
+            intlist_input.Clear();
+            foreach (Card card in cardsToSelect)
             {
                 inputManager.tempIDs.Add(card.tempID);
                 inputManager.cardIDs.Add(card.id);
             }
-            inputManager.inputSignal = InputType.ChooseCardFromRideDeck;
+            inputManager.inputSignal = InputType.SelectFromList;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
+        public void WaitForReadyToContinue()
+        {
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
-            int_input = inputManager.inputs[0];
+            foreach (int input in inputManager.inputs)
+                intlist_input.Add(input);
+            inputManager.inputs.Clear();
             inputManager.inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
-            oSignalEvent.Set();
         }
     }
 
@@ -231,13 +245,13 @@ public class VisualInputManager : NetworkBehaviour
         PlayerFrontLeft.GetComponent<UnitSlotBehavior>().slot = FL.PlayerFrontLeft;
         PlayerFrontRight.GetComponent<UnitSlotBehavior>().slot = FL.PlayerFrontRight;
         PlayerBackLeft.GetComponent<UnitSlotBehavior>().slot = FL.PlayerBackLeft;
-        PlayerBackMiddle.GetComponent<UnitSlotBehavior>().slot = FL.PlayerBackMiddle;
+        PlayerBackMiddle.GetComponent<UnitSlotBehavior>().slot = FL.PlayerBackCenter;
         PlayerBackRight.GetComponent<UnitSlotBehavior>().slot = FL.PlayerBackRight;
         EnemyVG.GetComponent<UnitSlotBehavior>().slot = FL.EnemyVanguard;
         EnemyFrontLeft.GetComponent<UnitSlotBehavior>().slot = FL.EnemyFrontLeft;
         EnemyFrontRight.GetComponent<UnitSlotBehavior>().slot = FL.EnemyFrontRight;
         EnemyBackLeft.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackLeft;
-        EnemyBackMiddle.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackMiddle;
+        EnemyBackMiddle.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackCenter;
         EnemyBackRight.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackRight;
     }
 
@@ -281,6 +295,10 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(SelectCardsFromHand());
                     break;
+                case InputType.SelectFromList:
+                    receivedInput = true;
+                    StartCoroutine(SelectFromList());
+                    break;
             }
         }
     }
@@ -311,6 +329,7 @@ public class VisualInputManager : NetworkBehaviour
         public const int RideDeck = 6;
         public const int ChooseCardFromRideDeck = 7;
         public const int SelectCardsFromHand = 8;
+        public const int SelectFromList = 9;
     }
 
     public void ResetInputs()
@@ -616,6 +635,48 @@ public class VisualInputManager : NetworkBehaviour
         {
             cardSelect.Show();
             cardSelect.Initialize("Discard " + count + " card(s).", count, count);
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                card = cardFightManager.LookUpCard(cardIDs[i]);
+                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name);
+            }
+            toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
+            int selection = -1;
+            IEnumerator Dialog()
+            {
+                var waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
+                while (selection < 0)
+                {
+                    if (waitForButton.PressedButton == cardSelect.SelectButton)
+                        selection = 0;
+                    yield return null;
+                }
+                waitForButton.Reset();
+                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+                playerManager = networkIdentity.GetComponent<PlayerManager>();
+                playerManager.CmdChangeInputs(cardSelect.selected);
+            }
+            Debug.Log("waiting for button");
+            StartCoroutine(Dialog());
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
+    IEnumerator SelectFromList()
+    {
+        Card card;
+        while (cardFightManager.inAnimation)
+        {
+            yield return null;
+        }
+        if (isActingPlayer())
+        {
+            cardSelect.Show();
+            cardSelect.Initialize(query, min, count);
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
