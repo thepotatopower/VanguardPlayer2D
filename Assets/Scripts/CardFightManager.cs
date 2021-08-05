@@ -90,7 +90,10 @@ public class CardFightManager : NetworkBehaviour
                 inAnimation = true;
                 StartCoroutine(animations[0]);
                 while (inAnimation)
+                {
+                    //Debug.Log("inanimation");
                     yield return null;
+                }
                 animations.RemoveAt(0);
             }
             yield return null;
@@ -201,6 +204,7 @@ public class CardFightManager : NetworkBehaviour
 
     IEnumerator ChangeZoneRoutine(int previousLocation, int previousFL, int currentLocation, int currentFL, Card card)
     {
+        Debug.Log("changing zone");
         inAnimation = true;
         PlayerHand.GetComponent<PlayerHand>().Reset();
         GameObject previousZone = null;
@@ -301,7 +305,10 @@ public class CardFightManager : NetworkBehaviour
                 }
             }
             else
+            {
+                inAnimation = false;
                 yield break;
+            }
             if (i < 1)
                 previousZone = zone;
             else

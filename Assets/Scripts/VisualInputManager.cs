@@ -240,6 +240,8 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.readyToContinue = false;
             foreach (int input in inputManager.inputs)
                 intlist_input.Add(input);
+            Debug.Log("received input 1: " + inputManager.input1);
+            Debug.Log("received input 2: " + inputManager.input2);
             int_input = inputManager.input1;
             int_input2 = inputManager.input2;
             inputManager.inputs.Clear();
@@ -771,6 +773,7 @@ public class VisualInputManager : NetworkBehaviour
 
     IEnumerator SelectRidePhaseAction()
     {
+        Debug.Log("selecting ride phase action");
         List<int> list = new List<int>();
         while (cardFightManager.InAnimation())
         {

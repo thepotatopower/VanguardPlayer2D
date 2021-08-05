@@ -106,6 +106,7 @@ public class PlayerManager : NetworkBehaviour
         RpcResetReceive();
     }
 
+    [Command]
     public void CmdSingleInputs(int selection1, int selection2)
     {
         VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
