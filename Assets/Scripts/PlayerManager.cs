@@ -101,6 +101,16 @@ public class PlayerManager : NetworkBehaviour
     {
         VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
         vim.player1_input = selection;
+        vim.input1 = selection;
+        vim.numResponses = 2;
+        RpcResetReceive();
+    }
+
+    public void CmdSingleInputs(int selection1, int selection2)
+    {
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        vim.input1 = selection1;
+        vim.input2 = selection2;
         vim.numResponses = 2;
         RpcResetReceive();
     }

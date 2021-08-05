@@ -23,13 +23,13 @@ public class CardBehavior : MonoBehaviour
     public bool faceup = false;
     public int layer = 0;
     public bool selected = false;
+    public bool selectable = false;
     public IEnumerator coroutine;
     Vector3 position, rotation, scale, originalPosition;
 
     void Update()
     {
-        if (!inputManager.cardsAreSelectable)
-            GameObject.Destroy(selectedCard);
+
     }
 
     void Start()
@@ -102,6 +102,8 @@ public class CardBehavior : MonoBehaviour
                     selected = true;
                 }
             }
+            if (selectable)
+                inputManager.CardClicked(Card);
         }
     }
 
@@ -129,10 +131,31 @@ public class CardBehavior : MonoBehaviour
                 selectedCard.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
             if (oldPosition == this.transform.position)
                 break;
-            Debug.Log("hovering");
+            //Debug.Log("hovering");
             yield return null;
         }
         this.transform.position = newPosition;
+    }
+
+    public void MarkAsSelectable()
+    {
+        if (this.transform.parent.name == "PlayerHand")
+        {
+            selectedCard = GameObject.Instantiate(selectedCardPrefab);
+            Debug.Log("instantiated");
+            selectedCard.transform.position = this.transform.position;
+            selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
+            selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
+            selectedCard.transform.GetComponent<Image>().color = Color.cyan;
+            selectable = true;
+        }
+    }
+
+    public void Reset()
+    {
+        selected = false;
+        selectable = false;
+        GameObject.Destroy(selectedCard);
     }
 
     float ConvertToUnits(float p)

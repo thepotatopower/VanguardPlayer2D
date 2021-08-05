@@ -12,6 +12,7 @@ public class CardFightManager : NetworkBehaviour
 {
     // Start is called before the first frame update
     public VanguardEngine.CardFight cardFight = null;
+    public GameObject PhaseManager;
     public GameObject Field;
     public GameObject PlayerHand;
     public GameObject EnemyHand;
@@ -31,7 +32,8 @@ public class CardFightManager : NetworkBehaviour
     public VisualInputManager inputManager;
     public Dictionary<string, Card> cardDict;
     public string SQLpath;
-    public bool inAnimation = false;
+    bool inAnimation = false;
+    public List<IEnumerator> animations = new List<IEnumerator>();
 
     [SyncVar]
     public int counter;
@@ -58,11 +60,13 @@ public class CardFightManager : NetworkBehaviour
         Field = GameObject.Find("Field");
         inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
         inputManager.cardFightManager = this;
+        PhaseManager = GameObject.Find("PhaseManager");
         cardDict = new Dictionary<string, Card>();
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
         cardPrefab = playerManager.cardPrefab;
-        SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;"; 
+        SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;";
+        StartCoroutine(AnimateAnimations());
         if (isServer)
         {
             Debug.Log("this is server");
@@ -75,6 +79,29 @@ public class CardFightManager : NetworkBehaviour
             remote = networkIdentity;
             playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 2);
         }
+    }
+
+    IEnumerator AnimateAnimations()
+    {
+        while (true)
+        {
+            if (animations.Count > 0)
+            {
+                inAnimation = true;
+                StartCoroutine(animations[0]);
+                while (inAnimation)
+                    yield return null;
+                animations.RemoveAt(0);
+            }
+            yield return null;
+        }
+    }
+
+    public bool InAnimation()
+    {
+        if (animations.Count == 0)
+            return false;
+        return true;
     }
 
     public List<string> SyncListToList(SyncList<string> input)
@@ -99,6 +126,10 @@ public class CardFightManager : NetworkBehaviour
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
         cardFight._player1.OnZoneChanged += ChangeZone;
+        cardFight.OnDrawPhase += PerformDrawPhase;
+        cardFight.OnStandPhase += PerformStandPhase;
+        cardFight.OnRidePhase += PerformRidePhase;
+        cardFight.OnMainPhase += PerformMainPhase;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -165,14 +196,13 @@ public class CardFightManager : NetworkBehaviour
     [ClientRpc]
     public void RpcChangeZone(int previousLocation, int previousFL, int currentLocation, int currentFL, Card card)
     {
-        StartCoroutine(ChangeZoneRoutine(previousLocation, previousFL, currentLocation, currentFL, card));
+        animations.Add(ChangeZoneRoutine(previousLocation, previousFL, currentLocation, currentFL, card));
     }
 
     IEnumerator ChangeZoneRoutine(int previousLocation, int previousFL, int currentLocation, int currentFL, Card card)
     {
-        while (inAnimation)
-            yield return null;
         inAnimation = true;
+        PlayerHand.GetComponent<PlayerHand>().Reset();
         GameObject previousZone = null;
         GameObject currentZone = null;
         GameObject zone = null;
@@ -379,13 +409,11 @@ public class CardFightManager : NetworkBehaviour
     [ClientRpc]
     public void RpcStandUpVanguard()
     {
-        StartCoroutine(WaitForFlip());
+        animations.Add(WaitForFlip());
     }
 
     IEnumerator WaitForFlip()
     {
-        while (inAnimation)
-            yield return null;
         inAnimation = true;
         StartCoroutine(inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().Flip());
         StartCoroutine(inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().Flip());
@@ -394,54 +422,45 @@ public class CardFightManager : NetworkBehaviour
         inAnimation = false;
     }
 
-    public void PerformRideFromRideDeck(object sender, CardEventArgs e)
+    public void PerformDrawPhase(object sender, CardEventArgs e)
     {
-        Debug.Log("Riding " + e.card.name);
-        RpcRideFromRideDeck(e.playerID, e.card.id);
+        Debug.Log("draw phase");
+        RpcChangePhase(Phase.Draw, cardFight.actingPlayer._playerID, cardFight._turn);
+    }
+
+    public void PerformStandPhase(object sender, CardEventArgs e)
+    {
+        Debug.Log("stand phase");
+        RpcChangePhase(Phase.Stand, cardFight.actingPlayer._playerID, cardFight._turn);
+    }
+
+    public void PerformRidePhase(object sender, CardEventArgs e)
+    {
+        Debug.Log("ride phase");
+        RpcChangePhase(Phase.Ride, cardFight.actingPlayer._playerID, cardFight._turn);
+    }
+
+    public void PerformMainPhase(object sender, CardEventArgs e)
+    {
+        Debug.Log("main phase");
+        RpcChangePhase(Phase.Main, cardFight.actingPlayer._playerID, cardFight._turn); 
     }
 
     [ClientRpc]
-    public void RpcRideFromRideDeck(int playerID, string cardID)
+    public void RpcChangePhase(int phase, int actingPlayer, int turn)
     {
-        bool player;
-        GameObject RideDeck;
-        GameObject VG;
-        GameObject newVG = GameObject.Instantiate(cardPrefab);
-        newVG.GetComponent<CardBehavior>().faceup = true;
-        newVG.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
-        newVG.GetComponent<CardBehavior>().card = LookUpCard(cardID);
-        if (isPlayerAction(playerID))
-        {
-            player = true;
-            RideDeck = PlayerRideDeckZone;
-            VG = inputManager.PlayerVG;
-        }
+        if ((actingPlayer == 1 && isServer) || (actingPlayer == 2 && !isServer))
+            animations.Add(WaitForPhase(phase, true, turn));
         else
-        {
-            player = false;
-            RideDeck = EnemyRideDeckZone;
-            VG = inputManager.EnemyVG;
-            newVG.transform.Rotate(new Vector3(180, 0, 0));
-        }
-        StartCoroutine(MoveFromRideDeckToVG(newVG, RideDeck, VG));
+            animations.Add(WaitForPhase(phase, false, turn));
     }
 
-    IEnumerator MoveFromRideDeckToVG(GameObject newVG, GameObject RideDeck, GameObject VG)
+    IEnumerator WaitForPhase(int phase, bool actingPlayer, int turn)
     {
-        while (inAnimation)
-            yield return null;
         inAnimation = true;
-        newVG.transform.SetParent(Field.transform);
-        newVG.transform.position = RideDeck.transform.position;
-        float step = 2000 * Time.deltaTime;
-        while (Vector3.Distance(newVG.transform.position, VG.transform.position) > 0.01f)
-        {
-            newVG.transform.position = Vector3.MoveTowards(newVG.transform.position, VG.transform.position, step);
-            yield return null;
-        }
-        Card card = newVG.GetComponent<CardBehavior>().card;
-        VG.GetComponent<UnitSlotBehavior>().AddCard(card.grade, VG.GetComponent<UnitSlotBehavior>()._soul + 1, card.critical, card.power, true, true, card.id, newVG);
-        RideDeck.GetComponent<Pile>().CountChange(-1);
+        inAnimation = true;
+        PhaseManager.GetComponent<PhaseManager>().ChangePhase(phase, actingPlayer, turn);
+        yield return new WaitForSeconds(1);
         inAnimation = false;
     }
 

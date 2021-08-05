@@ -6,6 +6,8 @@ using UnityEngine.UI;
 using Mirror;
 using System.Threading;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
+using System;
 
 public class VisualInputManager : NetworkBehaviour
 { 
@@ -16,6 +18,8 @@ public class VisualInputManager : NetworkBehaviour
     public Button yesButton;
     public Button noButton;
     public Button toggleCardSelect;
+    public Button cardButton;
+    public Button rideFromRideDeck;
     public GameObject PlayerBackRight;
     public GameObject PlayerBackMiddle;
     public GameObject PlayerBackLeft;
@@ -30,6 +34,7 @@ public class VisualInputManager : NetworkBehaviour
     public GameObject EnemyBackRight;
     public GameObject messageBox;
     public GameObject PlayerHand;
+    public GameObject PhaseManager;
     public CardSelect cardSelect;
     public IM inputManager;
     public Thread currentThread;
@@ -46,6 +51,10 @@ public class VisualInputManager : NetworkBehaviour
     [SyncVar]
     public int numResponses = 0;
     [SyncVar]
+    public int input1 = 0;
+    [SyncVar]
+    public int input2 = 0;
+    [SyncVar]
     public bool readyToContinue = false;
     [SyncVar]
     public bool reversed = false;
@@ -53,6 +62,8 @@ public class VisualInputManager : NetworkBehaviour
     public int min = 0;
     [SyncVar]
     public string query = "";
+    [SyncVar]
+    public bool bool1 = false;
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<string> cardIDs = new SyncList<string>();
@@ -61,6 +72,9 @@ public class VisualInputManager : NetworkBehaviour
     public bool cardsAreHoverable = true;
     public List<int> selectedCards;
     public UnityEvent m_myEvent;
+    public EventSystem eventSystem;
+    int selectedCard = -1;
+    List<Button> miscellaneousButtons;
 
     //VanguardEngine's InputManager logic
     public class IM : InputManager
@@ -199,12 +213,35 @@ public class VisualInputManager : NetworkBehaviour
             oSignalEvent.Set();
         }
 
+        protected override void SelectRidePhaseAction_Input()
+        {
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            inputManager.bool1 = false;
+            if (_player1.CanRideFromHand())
+            {
+                foreach (Card card in _player1.GetRideableCards(false))
+                {
+                    inputManager.cardIDs.Add(card.id);
+                    inputManager.tempIDs.Add(card.tempID);
+                }
+            }
+            if (_player1.CanRideFromRideDeck())
+                inputManager.bool1 = true;
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.SelectRidePhaseAction;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
         public void WaitForReadyToContinue()
         {
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             foreach (int input in inputManager.inputs)
                 intlist_input.Add(input);
+            int_input = inputManager.input1;
+            int_input2 = inputManager.input2;
             inputManager.inputs.Clear();
             inputManager.inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
@@ -220,6 +257,7 @@ public class VisualInputManager : NetworkBehaviour
     // VanguardPlayer2D's InputManager logic
     void Start()
     {
+        miscellaneousButtons = new List<Button>();
         currentThread = Thread.CurrentThread;
         rockButton = GameObject.Find("RockButton").GetComponent<Button>();
         rockButton.transform.position = new Vector3(10000, 0, 0);
@@ -237,6 +275,8 @@ public class VisualInputManager : NetworkBehaviour
         noButton.transform.position = new Vector3(10000, 0, 0);
         toggleCardSelect = GameObject.Find("ToggleCardSelect").GetComponent<Button>();
         toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
+        cardButton.transform.position = new Vector3(10000, 0, 0);
+        ResetMiscellaneousButtons();
         cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         cardSelect.Hide();
         PlayerHand = GameObject.Find("PlayerHand");
@@ -299,6 +339,22 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(SelectFromList());
                     break;
+                case InputType.SelectRidePhaseAction:
+                    receivedInput = true;
+                    StartCoroutine(SelectRidePhaseAction());
+                    break;
+            }
+        }
+        if (Input.GetMouseButtonDown(0))
+        {
+            foreach (Button button in miscellaneousButtons)
+            {
+                if (button.transform.position.x < 5000 && eventSystem.currentSelectedGameObject != button.gameObject)
+                {
+                    ResetMiscellaneousButtons();
+                    break;
+                }
+
             }
         }
     }
@@ -330,12 +386,14 @@ public class VisualInputManager : NetworkBehaviour
         public const int ChooseCardFromRideDeck = 7;
         public const int SelectCardsFromHand = 8;
         public const int SelectFromList = 9;
+        public const int SelectRidePhaseAction = 10;
     }
 
     public void ResetInputs()
     {
         player1_input = -1;
         player2_input = -1;
+        bool1 = false;
         rockButton.transform.position = new Vector3(10000, 0, 0);
         paperButton.transform.position = new Vector3(10000, 0, 0);
         scissorsButton.transform.position = new Vector3(10000, 0, 0);
@@ -343,9 +401,12 @@ public class VisualInputManager : NetworkBehaviour
         mulliganButton.transform.position = new Vector3(10000, 0, 0);
         yesButton.transform.position = new Vector3(10000, 0, 0);
         noButton.transform.position = new Vector3(10000, 0, 0);
+        toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
+        ResetMiscellaneousButtons();
         cardSelect.Hide();
         cardSelect.ResetItems();
         cardsAreSelectable = false;
+        PlayerHand.GetComponent<PlayerHand>().Reset();
         if (isServer)
         {
             Debug.Log("host resetting");
@@ -470,7 +531,7 @@ public class VisualInputManager : NetworkBehaviour
 
     IEnumerator Mulligan()
     {
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
             //Debug.Log("waiting");
@@ -506,7 +567,7 @@ public class VisualInputManager : NetworkBehaviour
 
     IEnumerator Ride()
     {
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
         }
@@ -545,7 +606,7 @@ public class VisualInputManager : NetworkBehaviour
 
     IEnumerator RideDeck()
     {
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
         }
@@ -585,7 +646,7 @@ public class VisualInputManager : NetworkBehaviour
     IEnumerator ChooseCardFromRideDeck()
     {
         Card card;
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
         }
@@ -627,7 +688,7 @@ public class VisualInputManager : NetworkBehaviour
     IEnumerator SelectCardsFromHand()
     {
         Card card;
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
         }
@@ -669,7 +730,7 @@ public class VisualInputManager : NetworkBehaviour
     IEnumerator SelectFromList()
     {
         Card card;
-        while (cardFightManager.inAnimation)
+        while (cardFightManager.InAnimation())
         {
             yield return null;
         }
@@ -697,6 +758,55 @@ public class VisualInputManager : NetworkBehaviour
                 NetworkIdentity networkIdentity = NetworkClient.connection.identity;
                 playerManager = networkIdentity.GetComponent<PlayerManager>();
                 playerManager.CmdChangeInputs(cardSelect.selected);
+            }
+            Debug.Log("waiting for button");
+            StartCoroutine(Dialog());
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
+    IEnumerator SelectRidePhaseAction()
+    {
+        List<int> list = new List<int>();
+        while (cardFightManager.InAnimation())
+        {
+            yield return null;
+        }
+        if (isActingPlayer())
+        {
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                PlayerHand.GetComponent<PlayerHand>().MarkAsSelectable(tempIDs[i]);
+            }
+            int selection = -1;
+            int selection2 = -1;
+            miscellaneousButtons.Clear();
+            miscellaneousButtons.Add(rideFromRideDeck);
+            miscellaneousButtons.Add(cardButton);
+            IEnumerator Dialog()
+            {
+                var waitForButton = new WaitForUIButtons(rideFromRideDeck, cardButton, PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
+                while (selection < 0)
+                {
+                    if (waitForButton.PressedButton == rideFromRideDeck)
+                        selection = RidePhaseAction.RideFromRideDeck;
+                    else if (waitForButton.PressedButton == cardButton)
+                    {
+                        selection = RidePhaseAction.RideFromHand;
+                        selection2 = selectedCard;
+                    }
+                    else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().MainPhaseButton)
+                        selection = RidePhaseAction.End;
+                    yield return null;
+                }
+                waitForButton.Reset();
+                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+                playerManager = networkIdentity.GetComponent<PlayerManager>();
+                playerManager.CmdSingleInputs(selection, selection2);
             }
             Debug.Log("waiting for button");
             StartCoroutine(Dialog());
@@ -740,5 +850,31 @@ public class VisualInputManager : NetworkBehaviour
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
         playerManager.CmdReady();
+    }
+
+    public void ResetMiscellaneousButtons()
+    {
+        rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
+        cardButton.transform.position = new Vector3(10000, 0, 0);
+    }
+
+    public void SpawnRideFromRideDeckButton()
+    {
+        if (inputSignal == InputType.SelectRidePhaseAction && bool1)
+        {
+            GameObject rideDeck = GameObject.Find("PlayerRideDeck");
+            rideFromRideDeck.transform.position = new Vector3(rideDeck.transform.position.x, rideDeck.transform.position.y + ((rideDeck.transform.localScale.y / (float)2) + (rideFromRideDeck.transform.localScale.y * (float)1.25)), 0);
+        }
+    }
+
+    public void CardClicked(GameObject card)
+    {
+        if (inputSignal == InputType.SelectRidePhaseAction)
+        {
+            cardButton.transform.GetComponentInChildren<Text>().text = "Ride";
+            cardButton.transform.position = new Vector3(card.transform.position.x, card.transform.position.y + 100, 0);
+            Debug.Log(card.name);
+            selectedCard = Int32.Parse(card.name);
+        }
     }
 }
