@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using VanguardEngine;
 
 public class UnitSlotBehavior : MonoBehaviour
 {
@@ -19,6 +20,12 @@ public class UnitSlotBehavior : MonoBehaviour
     public GameObject unit = null;
     public int slot;
     public bool inAnimation = false;
+    public int _FL;
+
+    public void Initialize(int FL)
+    {
+        _FL = FL;
+    }
 
     public void AddCard(int grade, int soul, int critical, int power, bool rightup, bool faceup, string cardID, GameObject card)
     {
@@ -34,6 +41,8 @@ public class UnitSlotBehavior : MonoBehaviour
         unit.transform.SetParent(this.transform);
         unit.transform.SetAsFirstSibling();
         unit.transform.localPosition = new Vector3(0, 0, 0);
+        if (this.transform.name.Contains("Enemy"))
+            unit.transform.Rotate(new Vector3(0, 0, 180));
         Grade.text = "G" + _grade;
         Soul.text = "S:" + _soul;
         Power.text = _power.ToString();
@@ -53,6 +62,30 @@ public class UnitSlotBehavior : MonoBehaviour
             Soul.enabled = false;
             Power.enabled = false;
             Critical.enabled = false;
+        }
+    }
+
+    public void ChangeUnit(GameObject card)
+    {
+        unit.transform.SetParent(null);
+        unit = card;
+        unit.transform.SetParent(this.transform);
+        unit.transform.SetAsFirstSibling();
+        unit.transform.localPosition = new Vector3(0, 0, 0);
+        if (this.transform.name.Contains("Enemy"))
+            unit.transform.Rotate(new Vector3(0, 0, 180));
+    }
+
+    public void RemoveCard(string cardID)
+    {
+        if (cardID == _cardID)
+        {
+            GameObject.Destroy(unit);
+            unit = null;
+            Grade.text = "";
+            Critical.text = "";
+            Soul.text = "";
+            Power.text = "";
         }
     }
 

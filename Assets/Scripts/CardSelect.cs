@@ -62,7 +62,7 @@ public class CardSelect : MonoBehaviour
     public void ResetItems()
     {
         if (content.transform.childCount > 3)
-            content.GetComponent<RectTransform>().offsetMin = new Vector2(content.GetComponent<RectTransform>().offsetMin.x - (300 * (content.transform.childCount - 3)), content.GetComponent<RectTransform>().offsetMin.y);
+            content.GetComponent<RectTransform>().offsetMin = new Vector2(content.GetComponent<RectTransform>().offsetMin.x + (300 * (content.transform.childCount - 3)), content.GetComponent<RectTransform>().offsetMin.y);
         for (int i = 0; i < content.transform.childCount; i++)
             GameObject.Destroy(content.transform.GetChild(i).gameObject);
         CardSelectItems.Clear();

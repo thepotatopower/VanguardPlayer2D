@@ -21,4 +21,19 @@ public class UnitSelectArea : MonoBehaviour
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
             unitSlot.GetComponent<Image>().enabled = false;
     }
+
+    public void OnPointerClicked()
+    {
+        GameObject inputManager = GameObject.Find("InputManager");
+        if (inputManager == null)
+        {
+            Debug.Log("no input manager");
+            return;
+        }
+        if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
+        {
+            Debug.Log("unit clicked");
+            inputManager.GetComponent<VisualInputManager>().UnitClicked(unitSlot._FL, unitSlot.unit);
+        }
+    }
 }
