@@ -55,6 +55,8 @@ public class PhaseManager : MonoBehaviour
             RidePhase();
         else if (phase == Phase.Main)
             MainPhase();
+        else if (phase == Phase.Battle)
+            BattlePhase();
     }
 
     void DrawPhase()
@@ -89,6 +91,15 @@ public class PhaseManager : MonoBehaviour
         if (_isActingPlayer && _turnCount > 1)
             BattlePhaseButton.interactable = true;
         if (_isActingPlayer && _turnCount == 1)
+            EndPhaseButton.interactable = true;
+    }
+
+    void BattlePhase()
+    {
+        ResetAll();
+        BattlePhaseButton.GetComponent<Image>().color = Color.green;
+        BattlePhaseButton.interactable = true;
+        if (_isActingPlayer)
             EndPhaseButton.interactable = true;
     }
 }

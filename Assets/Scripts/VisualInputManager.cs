@@ -20,6 +20,7 @@ public class VisualInputManager : NetworkBehaviour
     public Button toggleCardSelect;
     public Button cardButton;
     public Button rideFromRideDeck;
+    public Button cancelButton;
     public GameObject PlayerBackRight;
     public GameObject PlayerBackMiddle;
     public GameObject PlayerBackLeft;
@@ -35,6 +36,7 @@ public class VisualInputManager : NetworkBehaviour
     public GameObject messageBox;
     public GameObject PlayerHand;
     public GameObject PhaseManager;
+    public GameObject UnitSlots;
     public CardSelect cardSelect;
     public IM inputManager;
     public Thread currentThread;
@@ -77,6 +79,7 @@ public class VisualInputManager : NetworkBehaviour
     int selectedUnit = -1;
     List<Button> miscellaneousButtons;
     bool clicked = false;
+    WaitForUIButtons waitForButton;
 
     //VanguardEngine's InputManager logic
     public class IM : InputManager
@@ -119,40 +122,19 @@ public class VisualInputManager : NetworkBehaviour
 
         protected override void YesNo_Input()
         {
-            if (prompt == PromptType.Ride)
-            {
-                Thread.Sleep(250);
-                inputManager.inputSignal = InputType.Ride;
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                if (inputManager.player1_input == 0)
-                    bool_input = true;
-                else
-                    bool_input = false;
-                Debug.Log("selection made: " + int_input);
-                inputManager.inputSignal = InputType.Reset;
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                oSignalEvent.Set();
-            }
-            else if (prompt == PromptType.RideFromRideDeck)
-            {
-                Thread.Sleep(250);
-                inputManager.inputSignal = InputType.RideDeck;
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                if (inputManager.player1_input == 0)
-                    bool_input = true;
-                else
-                    bool_input = false;
-                Debug.Log("selection made: " + int_input);
-                inputManager.inputSignal = InputType.Reset;
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                oSignalEvent.Set();
-            }
-            int_input = 1;
-            oSignalEvent.Set();
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.YesNo;
+            inputManager.query = string_input;
+            while (!inputManager.readyToContinue) ;
+            inputManager.readyToContinue = false;
+            if (inputManager.player1_input == 0)
+                bool_input = true;
+            else
+                bool_input = false;
+            Debug.Log("selection made: " + int_input);
+            inputManager.inputSignal = InputType.Reset;
+            while (!inputManager.readyToContinue) ;
+            inputManager.readyToContinue = false;
         }
 
         protected override void SelectCardsToMulligan_Input()
@@ -245,6 +227,41 @@ public class VisualInputManager : NetworkBehaviour
             }
         }
 
+        protected override void SelectBattlePhaseAction_Input()
+        {
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            inputManager.bool1 = false;
+            if (_player1.CanAttack())
+            {
+                foreach (Card card in _player1.GetCardsToAttackWith())
+                {
+                    inputManager.cardIDs.Add(card.id);
+                    inputManager.tempIDs.Add(card.tempID);
+                }
+            }
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.SelectBattlePhaseAction;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
+        protected override void SelectUnitToAttack_Input()
+        {
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            inputManager.bool1 = false;
+            foreach (Card card in _player1.GetPotentialAttackTargets())
+            {
+                inputManager.cardIDs.Add(card.id);
+                inputManager.tempIDs.Add(card.tempID);
+            }
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.SelectUnitToAttack;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
         public void WaitForReadyToContinue()
         {
             while (!inputManager.readyToContinue) ;
@@ -289,6 +306,8 @@ public class VisualInputManager : NetworkBehaviour
         toggleCardSelect = GameObject.Find("ToggleCardSelect").GetComponent<Button>();
         toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
         cardButton.transform.position = new Vector3(10000, 0, 0);
+        rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
+        cancelButton.transform.position = new Vector3(10000, 0, 0);
         ResetMiscellaneousButtons();
         cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         cardSelect.Hide();
@@ -332,17 +351,9 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(Mulligan());
                     break;
-                case InputType.Ride:
+                case InputType.YesNo:
                     receivedInput = true;
-                    StartCoroutine(Ride());
-                    break;
-                case InputType.RideDeck:
-                    receivedInput = true;
-                    StartCoroutine(RideDeck());
-                    break;
-                case InputType.ChooseCardFromRideDeck:
-                    receivedInput = true;
-                    StartCoroutine(ChooseCardFromRideDeck());
+                    StartCoroutine(YesNo());
                     break;
                 case InputType.SelectCardsFromHand:
                     receivedInput = true;
@@ -363,6 +374,14 @@ public class VisualInputManager : NetworkBehaviour
                 case InputType.SelectCallLocation:
                     receivedInput = true;
                     StartCoroutine(SelectCallLocation());
+                    break;
+                case InputType.SelectBattlePhaseAction:
+                    receivedInput = true;
+                    StartCoroutine(SelectBattlePhaseAction());
+                    break;
+                case InputType.SelectUnitToAttack:
+                    receivedInput = true;
+                    StartCoroutine(SelectUnitToAttack());
                     break;
             }
         }
@@ -402,14 +421,14 @@ public class VisualInputManager : NetworkBehaviour
         public const int RPS = 2;
         public const int ResolveRPS = 3;
         public const int Mulligan = 4;
-        public const int Ride = 5;
-        public const int RideDeck = 6;
-        public const int ChooseCardFromRideDeck = 7;
+        public const int YesNo = 5;
         public const int SelectCardsFromHand = 8;
         public const int SelectFromList = 9;
         public const int SelectRidePhaseAction = 10;
         public const int SelectMainPhaseAction = 11;
         public const int SelectCallLocation = 12;
+        public const int SelectBattlePhaseAction = 13;
+        public const int SelectUnitToAttack = 14;
     }
 
     public void ResetInputs()
@@ -418,6 +437,11 @@ public class VisualInputManager : NetworkBehaviour
         player2_input = -1;
         bool1 = false;
         clicked = false;
+        if (waitForButton != null)
+        {
+            waitForButton.Reset();
+            waitForButton.Dispose();
+        }
         rockButton.transform.position = new Vector3(10000, 0, 0);
         paperButton.transform.position = new Vector3(10000, 0, 0);
         scissorsButton.transform.position = new Vector3(10000, 0, 0);
@@ -426,6 +450,7 @@ public class VisualInputManager : NetworkBehaviour
         yesButton.transform.position = new Vector3(10000, 0, 0);
         noButton.transform.position = new Vector3(10000, 0, 0);
         toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
+        cancelButton.transform.position = new Vector3(10000, 0, 0);
         ResetMiscellaneousButtons();
         miscellaneousButtons.Clear();
         cardSelect.Hide();
@@ -568,20 +593,15 @@ public class VisualInputManager : NetworkBehaviour
             mulliganButton.transform.localPosition = new Vector3(0, -110, 0);
             cardsAreSelectable = true;
             int selection = -1;
-            IEnumerator Dialog()
-            {
-                var waitForButton = new WaitForUIButtons(mulliganButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == mulliganButton)
-                        selection = 0;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                OnMulliganSelection(selection);
-            }
+            waitForButton = new WaitForUIButtons(mulliganButton);
             Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            while (selection < 0)
+            {
+                if (waitForButton.PressedButton == mulliganButton)
+                    selection = 0;
+                yield return null;
+            }
+            OnMulliganSelection(selection);
         }
         else
         {
@@ -590,7 +610,7 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
-    IEnumerator Ride()
+    IEnumerator YesNo()
     {
         while (cardFightManager.InAnimation())
         {
@@ -599,109 +619,23 @@ public class VisualInputManager : NetworkBehaviour
         if (isActingPlayer())
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Would you like to Ride?";
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = query;
             yesButton.transform.localPosition = new Vector3(-120, -110, 0);
             noButton.transform.localPosition = new Vector3(120, -110, 0);
             int selection = -1;
-            IEnumerator Dialog()
+            waitForButton = new WaitForUIButtons(yesButton, noButton);
+            while (selection < 0)
             {
-                var waitForButton = new WaitForUIButtons(yesButton, noButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == yesButton)
-                        selection = 0;
-                    else if (waitForButton.PressedButton == noButton)
-                        selection = 1;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdSingleInput(selection);
+                if (waitForButton.PressedButton == yesButton)
+                    selection = 0;
+                else if (waitForButton.PressedButton == noButton)
+                    selection = 1;
+                yield return null;
             }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
-        }
-        else
-        {
-            messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
-        }
-    }
-
-    IEnumerator RideDeck()
-    {
-        while (cardFightManager.InAnimation())
-        {
-            yield return null;
-        }
-        if (isActingPlayer())
-        {
-            messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Ride from Ride Deck?";
-            yesButton.transform.localPosition = new Vector3(-120, -110, 0);
-            noButton.transform.localPosition = new Vector3(120, -110, 0);
-            int selection = -1;
-            IEnumerator Dialog()
-            {
-                var waitForButton = new WaitForUIButtons(yesButton, noButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == yesButton)
-                        selection = 0;
-                    else if (waitForButton.PressedButton == noButton)
-                        selection = 1;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdSingleInput(selection);
-            }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
-        }
-        else
-        {
-            messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
-        }
-    }
-
-    IEnumerator ChooseCardFromRideDeck()
-    {
-        Card card;
-        while (cardFightManager.InAnimation())
-        {
-            yield return null;
-        }
-        if (isActingPlayer())
-        {
-            cardSelect.Show();
-            cardSelect.Initialize("Choose card to Ride.", 1, 1);
-            for (int i = 0; i < tempIDs.Count; i++)
-            {
-                card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name);
-            }
-            toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
-            int selection = -1;
-            IEnumerator Dialog()
-            {
-                var waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == cardSelect.SelectButton)
-                        selection = 0;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdChangeInputs(cardSelect.selected);
-            }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInput(selection);
         }
         else
         {
@@ -728,22 +662,17 @@ public class VisualInputManager : NetworkBehaviour
             }
             toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
             int selection = -1;
-            IEnumerator Dialog()
+            waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
+            while (selection < 0)
             {
-                var waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == cardSelect.SelectButton)
-                        selection = 0;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdChangeInputs(cardSelect.selected);
+                if (waitForButton.PressedButton == cardSelect.SelectButton)
+                    selection = 0;
+                yield return null;
             }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdChangeInputs(cardSelect.selected);
         }
         else
         {
@@ -770,22 +699,17 @@ public class VisualInputManager : NetworkBehaviour
             }
             toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
             int selection = -1;
-            IEnumerator Dialog()
+            waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
+            while (selection < 0)
             {
-                var waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
-                while (selection < 0)
-                {
-                    if (waitForButton.PressedButton == cardSelect.SelectButton)
-                        selection = 0;
-                    yield return null;
-                }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdChangeInputs(cardSelect.selected);
+                if (waitForButton.PressedButton == cardSelect.SelectButton)
+                    selection = 0;
+                yield return null;
             }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdChangeInputs(cardSelect.selected);
         }
         else
         {
@@ -813,29 +737,24 @@ public class VisualInputManager : NetworkBehaviour
             miscellaneousButtons.Clear();
             miscellaneousButtons.Add(rideFromRideDeck);
             miscellaneousButtons.Add(cardButton);
-            IEnumerator Dialog()
+            waitForButton = new WaitForUIButtons(rideFromRideDeck, cardButton, PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
+            while (selection < 0)
             {
-                var waitForButton = new WaitForUIButtons(rideFromRideDeck, cardButton, PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
-                while (selection < 0)
+                if (waitForButton.PressedButton == rideFromRideDeck)
+                    selection = RidePhaseAction.RideFromRideDeck;
+                else if (waitForButton.PressedButton == cardButton)
                 {
-                    if (waitForButton.PressedButton == rideFromRideDeck)
-                        selection = RidePhaseAction.RideFromRideDeck;
-                    else if (waitForButton.PressedButton == cardButton)
-                    {
-                        selection = RidePhaseAction.RideFromHand;
-                        selection2 = selectedCard;
-                    }
-                    else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().MainPhaseButton)
-                        selection = RidePhaseAction.End;
-                    yield return null;
+                    selection = RidePhaseAction.RideFromHand;
+                    selection2 = selectedCard;
                 }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdSingleInputs(selection, selection2);
+                else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().MainPhaseButton)
+                    selection = RidePhaseAction.End;
+                yield return null;
             }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInputs(selection, selection2);
         }
         else
         {
@@ -862,36 +781,77 @@ public class VisualInputManager : NetworkBehaviour
             int selection2 = -1;
             miscellaneousButtons.Clear();
             miscellaneousButtons.Add(cardButton);
-            IEnumerator Dialog()
+            waitForButton = new WaitForUIButtons(cardButton, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
+            while (selection < 0)
             {
-                var waitForButton = new WaitForUIButtons(cardButton, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
-                while (selection < 0)
+                if (waitForButton.PressedButton == cardButton)
                 {
-                    if (waitForButton.PressedButton == cardButton)
+                    if (cardButton.GetComponentInChildren<Text>().text == "Call")
                     {
-                        if (cardButton.GetComponentInChildren<Text>().text == "Call")
-                        {
-                            selection = MainPhaseAction.CallFromHand;
-                            selection2 = selectedCard;
-                        }
-                        else if (cardButton.GetComponentInChildren<Text>().text == "Move")
-                        {
-                            selection = MainPhaseAction.MoveRearguard;
-                            selection2 = selectedCard;
-                        }
+                        selection = MainPhaseAction.CallFromHand;
+                        selection2 = selectedCard;
                     }
-                    else if ((waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton) ||
-                        (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton))
-                        selection = MainPhaseAction.End;
-                    yield return null;
+                    else if (cardButton.GetComponentInChildren<Text>().text == "Move")
+                    {
+                        selection = MainPhaseAction.MoveRearguard;
+                        selection2 = selectedCard;
+                    }
                 }
-                waitForButton.Reset();
-                NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-                playerManager = networkIdentity.GetComponent<PlayerManager>();
-                playerManager.CmdSingleInputs(selection, selection2);
+                else if ((waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton) ||
+                    (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton))
+                    selection = MainPhaseAction.End;
+                yield return null;
             }
-            Debug.Log("waiting for button");
-            StartCoroutine(Dialog());
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInputs(selection, selection2);
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
+    IEnumerator SelectBattlePhaseAction()
+    {
+        Debug.Log("selecting battle phase action");
+        List<int> list = new List<int>();
+        while (cardFightManager.InAnimation())
+        {
+            yield return null;
+        }
+        if (isActingPlayer())
+        {
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                UnitSlots.GetComponent<UnitSlots>().MarkAsSelectable(tempIDs[i]);
+            }
+            int selection = -1;
+            int selection2 = -1;
+            miscellaneousButtons.Clear();
+            miscellaneousButtons.Add(cardButton);
+            waitForButton = new WaitForUIButtons(cardButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
+            while (selection < 0)
+            {
+                if (waitForButton.PressedButton == cardButton)
+                {
+                    if (cardButton.GetComponentInChildren<Text>().text == "Attack")
+                    {
+                        selection = BattlePhaseAction.Attack;
+                        selection2 = selectedCard;
+                        UnitSlots.GetComponent<UnitSlots>().Reset();
+                    }
+                }
+                else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton)
+                    selection = BattlePhaseAction.End;
+                yield return null;
+            }
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInputs(selection, selection2);
         }
         else
         {
@@ -918,6 +878,58 @@ public class VisualInputManager : NetworkBehaviour
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             playerManager.CmdSingleInput(selectedUnit);
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
+    IEnumerator SelectUnitToAttack()
+    {
+        Debug.Log("selecting unit to attack");
+        List<int> list = new List<int>();
+        while (cardFightManager.InAnimation())
+        {
+            yield return null;
+        }
+        if (isActingPlayer())
+        {
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                UnitSlots.GetComponent<UnitSlots>().MarkAsSelectable(tempIDs[i]);
+            }
+            int selection = -1;
+            int selection2 = -1;
+            miscellaneousButtons.Clear();
+            miscellaneousButtons.Add(cardButton);
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select unit to attack.";
+            cancelButton.transform.localPosition = new Vector3(0, -110, 0);
+            waitForButton = new WaitForUIButtons(cardButton, cancelButton);
+            while (selection < 0)
+            {
+                if (waitForButton.PressedButton == cardButton)
+                {
+                    if (cardButton.GetComponentInChildren<Text>().text == "Attack")
+                    {
+                        selection = selectedCard;
+                        UnitSlots.GetComponent<UnitSlots>().Reset();
+                    }
+                }
+                else if (waitForButton.PressedButton == cancelButton)
+                {
+                    selection = -1;
+                    UnitSlots.GetComponent<UnitSlots>().Reset();
+                    break;
+                }
+                yield return null;
+            }
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInputs(selection, selection2);
         }
         else
         {
@@ -993,7 +1005,7 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
-    public void UnitClicked(int unitSlot, GameObject unit)
+    public void UnitClicked(int unitSlot, GameObject unit, bool selected)
     {
         if (inputSignal == InputType.SelectCallLocation)
         {
@@ -1005,6 +1017,16 @@ public class VisualInputManager : NetworkBehaviour
             if (unit != null)
             {
                 cardButton.transform.GetComponentInChildren<Text>().text = "Move";
+                cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+                Debug.Log(unit.name);
+                selectedCard = Int32.Parse(unit.name);
+            }
+        }
+        else if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
+        {
+            if (unit != null && selected)
+            {
+                cardButton.transform.GetComponentInChildren<Text>().text = "Attack";
                 cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);

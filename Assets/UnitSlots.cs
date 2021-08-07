@@ -111,4 +111,28 @@ public class UnitSlots : MonoBehaviour
     {
         _unitSlots[FL].SetActive(true);
     }
+
+    public void MarkAsSelectable(int tempID)
+    {
+        UnitSelectArea area;
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null && _unitSlots[i].GetComponent<UnitSlotBehavior>().unit != null && Int32.Parse(_unitSlots[i].GetComponent<UnitSlotBehavior>().unit.name) == tempID)
+            {
+                area = _unitSlots[i].GetComponentInChildren<UnitSelectArea>();
+                area.MarkAsSelectable();
+            }
+        }
+    }
+
+    public void Reset()
+    {
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null)
+            {
+                _unitSlots[i].GetComponentInChildren<UnitSelectArea>().Reset();
+            }
+        }
+    }
 }

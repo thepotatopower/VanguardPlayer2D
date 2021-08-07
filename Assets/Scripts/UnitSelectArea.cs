@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class UnitSelectArea : MonoBehaviour
 {
+    Color noPointer = Color.white;
+    bool isSelectable = false;
 
     public void OnPointerEnter()
     {
@@ -19,7 +21,12 @@ public class UnitSelectArea : MonoBehaviour
     public void OnPointerExit()
     {
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
-            unitSlot.GetComponent<Image>().enabled = false;
+        {
+            if (noPointer != Color.white)
+                unitSlot.GetComponent<Image>().color = noPointer;
+            else
+                unitSlot.GetComponent<Image>().enabled = false;
+        }
     }
 
     public void OnPointerClicked()
@@ -33,7 +40,28 @@ public class UnitSelectArea : MonoBehaviour
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
         {
             Debug.Log("unit clicked");
-            inputManager.GetComponent<VisualInputManager>().UnitClicked(unitSlot._FL, unitSlot.unit);
+            inputManager.GetComponent<VisualInputManager>().UnitClicked(unitSlot._FL, unitSlot.unit, isSelectable);
+        }
+    }
+
+    public void MarkAsSelectable()
+    {
+        if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
+        {
+            noPointer = Color.cyan;
+            unitSlot.GetComponent<Image>().enabled = true;
+            unitSlot.GetComponent<Image>().color = Color.cyan;
+            isSelectable = true;
+        }
+    }
+
+    public void Reset()
+    {
+        if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
+        {
+            noPointer = Color.white;
+            unitSlot.GetComponent<Image>().enabled = false;
+            isSelectable = false;
         }
     }
 }

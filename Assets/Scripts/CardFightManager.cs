@@ -136,6 +136,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight.OnStandPhase += PerformStandPhase;
         cardFight.OnRidePhase += PerformRidePhase;
         cardFight.OnMainPhase += PerformMainPhase;
+        cardFight.OnBattlePhase += PerformBattlePhase;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -210,8 +211,8 @@ public class CardFightManager : NetworkBehaviour
                 grade = card.grade;
                 soul = cardFight._player1.GetSoul().Count;
                 critical = card.critical;
-                faceup = card.faceup;
-                upright = card.upright;
+                faceup = true;
+                upright = true;
             }
         }
         RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card, grade, soul, critical, faceup, upright);
@@ -524,6 +525,12 @@ public class CardFightManager : NetworkBehaviour
     {
         Debug.Log("main phase");
         RpcChangePhase(Phase.Main, cardFight.actingPlayer._playerID, cardFight._turn); 
+    }
+
+    public void PerformBattlePhase(object sender, CardEventArgs e)
+    {
+        Debug.Log("battle phase");
+        RpcChangePhase(Phase.Battle, cardFight.actingPlayer._playerID, cardFight._turn);
     }
 
     [ClientRpc]
