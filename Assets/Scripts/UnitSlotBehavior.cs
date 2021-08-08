@@ -14,7 +14,7 @@ public class UnitSlotBehavior : MonoBehaviour
     public Text Critical;
     public int _power;
     public Text Power;
-    public bool _rightup = true;
+    public bool _upright = true;
     public bool _faceup = true;
     public string _cardID;
     public GameObject unit = null;
@@ -27,13 +27,13 @@ public class UnitSlotBehavior : MonoBehaviour
         _FL = FL;
     }
 
-    public void AddCard(int grade, int soul, int critical, int power, bool rightup, bool faceup, string cardID, GameObject card)
+    public void AddCard(int grade, int soul, int critical, int power, bool upright, bool faceup, string cardID, GameObject card)
     {
         _grade = grade;
         _soul = soul;
         _critical = critical;
         _power = power;
-        _rightup = rightup;
+        _upright = upright;
         _faceup = faceup;
         _cardID = cardID;
         GameObject.Destroy(unit);
@@ -128,6 +128,37 @@ public class UnitSlotBehavior : MonoBehaviour
             yield return null;
         }
         unit.transform.localRotation = Zero;
+        inAnimation = false;
+    }
+
+    public IEnumerator Rotate(bool upright)
+    {
+        Debug.Log("unit slot behavior rotate");
+        inAnimation = true;
+        float step = 400 * Time.deltaTime;
+        Quaternion Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y + 90, unit.transform.localRotation.eulerAngles.z);
+        Quaternion Zero = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z);
+        if (_upright && !upright)
+        {
+            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z + 90);
+        }
+        else if (!_upright && upright)
+        {
+            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z - 90);
+        }
+        else
+        {
+            Debug.Log("already rotated");
+            inAnimation = false;
+            yield break;
+        }
+        while (Quaternion.Angle(unit.transform.localRotation, Ninety) > 0.01f)
+        {
+            unit.transform.localRotation = Quaternion.RotateTowards(unit.transform.localRotation, Ninety, step);
+            yield return null;
+        }
+        unit.transform.localRotation = Ninety;
+        _upright = upright;
         inAnimation = false;
     }
 }

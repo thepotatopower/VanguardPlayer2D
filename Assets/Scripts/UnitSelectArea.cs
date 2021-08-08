@@ -7,12 +7,14 @@ public class UnitSelectArea : MonoBehaviour
 {
     Color noPointer = Color.white;
     bool isSelectable = false;
+    public bool inAnimation = false;
 
     public void OnPointerEnter()
     {
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
         {
             unitSlot.GetComponent<Image>().enabled = true;
+            unitSlot.GetComponent<Image>().color = Color.green;
             if (unitSlot.unit != null && unitSlot._faceup)
                 GameObject.Find("CardFightManager").GetComponent<CardFightManager>().DisplayCard(unitSlot._cardID);
         }
@@ -63,5 +65,23 @@ public class UnitSelectArea : MonoBehaviour
             unitSlot.GetComponent<Image>().enabled = false;
             isSelectable = false;
         }
+    }
+
+    public IEnumerator Flash()
+    {
+        if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                unitSlot.GetComponent<Image>().enabled = true;
+                unitSlot.GetComponent<Image>().color = Color.white;
+                yield return new WaitForSecondsRealtime((float)0.10);
+                unitSlot.GetComponent<Image>().enabled = false;
+                yield return new WaitForSecondsRealtime((float)0.10);
+                Debug.Log("flashing");
+            }
+            OnPointerExit();
+        }
+        inAnimation = false;
     }
 }

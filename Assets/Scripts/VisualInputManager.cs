@@ -37,6 +37,8 @@ public class VisualInputManager : NetworkBehaviour
     public GameObject PlayerHand;
     public GameObject PhaseManager;
     public GameObject UnitSlots;
+    public GameObject POW;
+    public GameObject SLD;
     public CardSelect cardSelect;
     public IM inputManager;
     public Thread currentThread;
@@ -66,6 +68,8 @@ public class VisualInputManager : NetworkBehaviour
     public string query = "";
     [SyncVar]
     public bool bool1 = false;
+    [SyncVar]
+    public int int1 = 0;
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<string> cardIDs = new SyncList<string>();
@@ -125,6 +129,8 @@ public class VisualInputManager : NetworkBehaviour
             Thread.Sleep(250);
             inputManager.inputSignal = InputType.YesNo;
             inputManager.query = string_input;
+            if (string_input == "Boost?")
+                inputManager.int1 = _player1.GetBooster(_player1.GetAttacker().tempID);
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             if (inputManager.player1_input == 0)
@@ -308,6 +314,8 @@ public class VisualInputManager : NetworkBehaviour
         cardButton.transform.position = new Vector3(10000, 0, 0);
         rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
         cancelButton.transform.position = new Vector3(10000, 0, 0);
+        POW.transform.position = new Vector3(10000, 0, 0);
+        SLD.transform.position = new Vector3(10000, 0, 0);
         ResetMiscellaneousButtons();
         cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         cardSelect.Hide();
@@ -627,7 +635,15 @@ public class VisualInputManager : NetworkBehaviour
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == yesButton)
+                {
                     selection = 0;
+                    if (query == "Boost?")
+                    {
+                        Debug.Log("booster circle: " + int1);
+                        POW.GetComponent<POWSLD>().SetCount(POW.GetComponent<POWSLD>().GetCount() +
+                            UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(int1).GetComponent<UnitSlotBehavior>()._power);
+                    }
+                }
                 else if (waitForButton.PressedButton == noButton)
                     selection = 1;
                 yield return null;
@@ -841,6 +857,8 @@ public class VisualInputManager : NetworkBehaviour
                     {
                         selection = BattlePhaseAction.Attack;
                         selection2 = selectedCard;
+                        POW.transform.localPosition = new Vector3(-382, 0, 0);
+                        POW.GetComponent<POWSLD>().SetCount(UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponent<UnitSlotBehavior>()._power);
                         UnitSlots.GetComponent<UnitSlots>().Reset();
                     }
                 }
@@ -921,6 +939,8 @@ public class VisualInputManager : NetworkBehaviour
                 else if (waitForButton.PressedButton == cancelButton)
                 {
                     selection = -1;
+                    POW.transform.position = new Vector3(-10000, 0, 0);
+                    POW.GetComponent<POWSLD>().SetCount(0);
                     UnitSlots.GetComponent<UnitSlots>().Reset();
                     break;
                 }
@@ -1020,6 +1040,7 @@ public class VisualInputManager : NetworkBehaviour
                 cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);
+                selectedUnit = unitSlot;
             }
         }
         else if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
@@ -1030,6 +1051,7 @@ public class VisualInputManager : NetworkBehaviour
                 cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);
+                selectedUnit = unitSlot;
             }
         }
     }

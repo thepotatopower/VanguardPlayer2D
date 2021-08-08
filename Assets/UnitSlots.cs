@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI.Extensions;
+using UnityEngine.UI;
 using VanguardEngine;
 using System;
 
@@ -78,13 +80,13 @@ public class UnitSlots : MonoBehaviour
         if (current.unit == null)
         {
             Debug.Log("current is null");
-            current.AddCard(previous._grade, previous._soul, previous._critical, previous._power, previous._rightup, previous._faceup, previous._cardID, cardFightManager.CreateNewCard(previous._cardID, Int32.Parse(previous.unit.name)));
+            current.AddCard(previous._grade, previous._soul, previous._critical, previous._power, previous._upright, previous._faceup, previous._cardID, cardFightManager.CreateNewCard(previous._cardID, Int32.Parse(previous.unit.name)));
             previous.RemoveCard(previous._cardID);
             return;
         }
         else if (previous.unit == null)
         {
-            previous.AddCard(current._grade, current._soul, current._critical, current._power, current._rightup, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
+            previous.AddCard(current._grade, current._soul, current._critical, current._power, current._upright, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
             current.RemoveCard(current._cardID);
             return;
         }
@@ -96,9 +98,9 @@ public class UnitSlots : MonoBehaviour
         int tempPower = previous._power;
         string tempCardID = previous._cardID;
         bool tempFaceUp = previous._faceup;
-        bool tempUpRight = previous._rightup;
+        bool tempUpRight = previous._upright;
         string tempID = previous.unit.name;
-        previous.AddCard(current._grade, current._soul, current._critical, current._power, current._rightup, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
+        previous.AddCard(current._grade, current._soul, current._critical, current._power, current._upright, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
         current.AddCard(tempGrade, tempSoul, tempCritical, tempPower, tempUpRight, tempFaceUp, tempCardID, cardFightManager.CreateNewCard(tempCardID, Int32.Parse(tempID)));
     }
 
@@ -133,6 +135,26 @@ public class UnitSlots : MonoBehaviour
             {
                 _unitSlots[i].GetComponentInChildren<UnitSelectArea>().Reset();
             }
+        }
+    }
+
+    public void PerformAttack(int attackingCircle, int attackedCircle)
+    {
+        Debug.Log("performing attack");
+        UILineRenderer line = GameObject.Find("LineRenderer").GetComponent<UILineRenderer>();
+        List<Vector2> points = new List<Vector2>();
+        points.Add(_unitSlots[attackingCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
+        points.Add(_unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
+        Debug.Log(_unitSlots[attackingCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
+        line.Points = points.ToArray();
+        Debug.Log("number of positions: " + line.Points.Length);
+    }
+
+    public void ChangeColor(int circle,  Color color)
+    {
+        if (_unitSlots[circle] != null)
+        {
+            _unitSlots[circle].GetComponentInChildren<UnitSelectArea>().GetComponent<Image>().color = color;
         }
     }
 }

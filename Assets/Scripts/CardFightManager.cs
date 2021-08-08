@@ -27,6 +27,8 @@ public class CardFightManager : NetworkBehaviour
     public GameObject PlayerRideDeckZone;
     public GameObject EnemyDeckZone;
     public GameObject EnemyRideDeckZone;
+    public GameObject POW;
+    public GameObject SLD;
     public List<Card> playerDeck;
     public List<Card> enemyDeck;
     public PlayerManager playerManager;
@@ -63,6 +65,8 @@ public class CardFightManager : NetworkBehaviour
         inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
         inputManager.cardFightManager = this;
         PhaseManager = GameObject.Find("PhaseManager");
+        POW = GameObject.Find("POW");
+        SLD = GameObject.Find("SLD");
         cardDict = new Dictionary<string, Card>();
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
@@ -132,11 +136,14 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
         cardFight._player1.OnZoneChanged += ChangeZone;
         cardFight._player1.OnZoneSwapped += SwapZone;
+        cardFight._player1.OnUpRightChanged += ChangeUpRight;
         cardFight.OnDrawPhase += PerformDrawPhase;
         cardFight.OnStandPhase += PerformStandPhase;
         cardFight.OnRidePhase += PerformRidePhase;
         cardFight.OnMainPhase += PerformMainPhase;
         cardFight.OnBattlePhase += PerformBattlePhase;
+        cardFight._player1.OnAttack += PerformAttack;
+        cardFight._player2.OnAttack += PerformAttack;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -548,6 +555,74 @@ public class CardFightManager : NetworkBehaviour
         inAnimation = true;
         PhaseManager.GetComponent<PhaseManager>().ChangePhase(phase, actingPlayer, turn);
         yield return new WaitForSeconds(1);
+        inAnimation = false;
+    }
+
+    public void PerformAttack(object sender, CardEventArgs e)
+    {
+        VanguardEngine.Player player = sender as VanguardEngine.Player;
+        RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(player.GetAttackedCards()[0]),
+            e.currentPower, player.CalculatePowerOfUnit(player.GetCircle(player.GetAttackedCards()[0])));
+    }
+
+    [ClientRpc]
+    public void RpcPerformAttack(int attackingCircle, int attackedCircle, int power, int shield)
+    {
+        animations.Add(FlashUnit(attackedCircle));
+        animations.Add(ShowAttack(attackingCircle, attackedCircle, power, shield));
+    }
+
+    IEnumerator ShowAttack(int attackingCircle, int attackedCircle, int power, int shield)
+    {
+        UnitSlots.GetComponent<UnitSlots>().PerformAttack(attackingCircle, attackedCircle);
+        POW.transform.localPosition = new Vector3(-382, 0, 0);
+        SLD.transform.localPosition = new Vector3(382, 0, 0);
+        POW.GetComponent<POWSLD>().SetCount(power);
+        SLD.GetComponent<POWSLD>().SetCount(shield);
+        POW.GetComponent<POWSLD>().compare = true;
+        SLD.GetComponent<POWSLD>().compare = true;
+        inAnimation = false;
+        yield return null;
+    }
+
+    IEnumerator FlashUnit(int circle)
+    {
+        UnitSelectArea unit;
+        if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
+        {
+            unit = UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponentInChildren<UnitSelectArea>();
+            unit.inAnimation = true;
+            StartCoroutine(unit.Flash());
+            while (unit.inAnimation)
+                yield return null;
+            inAnimation = false;
+        }
+    }
+
+    public void ChangeUpRight(object sender, CardEventArgs e)
+    {
+        Debug.Log("rotating");
+        Player player = sender as Player;
+        RpcChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
+    }
+
+    [ClientRpc]
+    public void RpcChangeUpRight(int circle, bool upright)
+    {
+        animations.Add(RotateUnit(circle, upright));
+    }
+
+    IEnumerator RotateUnit(int circle, bool upright)
+    {
+        UnitSlotBehavior unit;
+        if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
+        {
+            unit = UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>();
+            unit.inAnimation = true;
+            StartCoroutine(unit.Rotate(upright));
+            while (unit.inAnimation)
+                yield return null;
+        }
         inAnimation = false;
     }
 
