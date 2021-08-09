@@ -73,6 +73,7 @@ public class VisualInputManager : NetworkBehaviour
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<string> cardIDs = new SyncList<string>();
+    public SyncList<string> strings = new SyncList<string>();
     public bool receivedInput = false;
     public bool cardsAreSelectable = false;
     public bool cardsAreHoverable = true;
@@ -162,16 +163,32 @@ public class VisualInputManager : NetworkBehaviour
         protected override void SelectFromList_Input()
         {
             Thread.Sleep(250);
+            string location;
             inputManager.count = int_value;
             inputManager.min = int_value2;
             inputManager.query = _query;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
+            inputManager.strings.Clear();
             intlist_input.Clear();
             foreach (Card card in cardsToSelect)
             {
                 inputManager.tempIDs.Add(card.tempID);
                 inputManager.cardIDs.Add(card.id);
+                location = "<>";
+                switch (_player1.GetLocation(card))
+                {
+                    case Location.RC:
+                        location = "<RC>";
+                        break;
+                    case Location.VC:
+                        location = "<VC>";
+                        break;
+                    case Location.Hand:
+                        location = "<Hand>";
+                        break;
+                }
+                inputManager.strings.Add(location);
             }
             inputManager.inputSignal = InputType.SelectFromList;
             WaitForReadyToContinue();
@@ -266,6 +283,17 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.inputSignal = InputType.SelectUnitToAttack;
             WaitForReadyToContinue();
             oSignalEvent.Set();
+        }
+
+        protected override void SelectGuardPhaseAction_Input()
+        {
+            if (_player1.CanGuard())
+                inputManager.bool1 = true;
+            else
+                inputManager.bool1 = false;
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.SelectGuardStepAction;
+            WaitForReadyToContinue();
         }
 
         public void WaitForReadyToContinue()
@@ -391,6 +419,10 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(SelectUnitToAttack());
                     break;
+                case InputType.SelectGuardStepAction:
+                    receivedInput = true;
+                    StartCoroutine(SelectGuardStepAction());
+                    break;
             }
         }
         if (Input.GetMouseButtonDown(0))
@@ -437,6 +469,7 @@ public class VisualInputManager : NetworkBehaviour
         public const int SelectCallLocation = 12;
         public const int SelectBattlePhaseAction = 13;
         public const int SelectUnitToAttack = 14;
+        public const int SelectGuardStepAction = 15;
     }
 
     public void ResetInputs()
@@ -459,6 +492,8 @@ public class VisualInputManager : NetworkBehaviour
         noButton.transform.position = new Vector3(10000, 0, 0);
         toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
         cancelButton.transform.position = new Vector3(10000, 0, 0);
+        Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
+        Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
         ResetMiscellaneousButtons();
         miscellaneousButtons.Clear();
         cardSelect.Hide();
@@ -944,6 +979,47 @@ public class VisualInputManager : NetworkBehaviour
                     UnitSlots.GetComponent<UnitSlots>().Reset();
                     break;
                 }
+                yield return null;
+            }
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdSingleInputs(selection, selection2);
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
+    IEnumerator SelectGuardStepAction()
+    {
+        Debug.Log("selecting guard step action");
+        List<int> list = new List<int>();
+        while (cardFightManager.InAnimation())
+        {
+            yield return null;
+        }
+        if (isActingPlayer())
+        {
+            Button selectionButton1 = GameObject.Find("SelectionButton1").GetComponent<Button>();
+            Button selectionButton2 = GameObject.Find("SelectionButton2").GetComponent<Button>();
+            int selection = -1;
+            int selection2 = -1;
+            selectionButton1.transform.localPosition = Globals.Instance.YesPosition;
+            selectionButton1.GetComponentInChildren<Text>().text = "Guard";
+            selectionButton2.transform.localPosition = Globals.Instance.NoPosition;
+            selectionButton2.GetComponentInChildren<Text>().text = "End Guard";
+            if (!bool1)
+                selectionButton1.interactable = false;
+            waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2);
+            while (selection < 0)
+            {
+                if (waitForButton.PressedButton == selectionButton1)
+                    selection = GuardStepAction.Guard;
+                else if (waitForButton.PressedButton == selectionButton2)
+                    selection = GuardStepAction.End;
                 yield return null;
             }
             waitForButton.Reset();

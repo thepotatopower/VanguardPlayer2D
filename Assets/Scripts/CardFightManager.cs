@@ -47,9 +47,15 @@ public class CardFightManager : NetworkBehaviour
     [SyncVar]
     public NetworkIdentity remote;
 
+    public int _attacker = -1;
+    public List<int> _attacked;
+    public int _booster;
+
     public void Start()
     {
         this.name = "CardFightManager";
+        Globals.Instance.cardFightManager = this;
+        _attacked = new List<int>();
         UnitSlots = GameObject.Find("UnitSlots");
         PlayerDeckZone = GameObject.Find("PlayerDeck");
         PlayerRideDeckZone = GameObject.Find("PlayerRideDeck");
@@ -83,7 +89,7 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd02.txt", LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -144,6 +150,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight.OnBattlePhase += PerformBattlePhase;
         cardFight._player1.OnAttack += PerformAttack;
         cardFight._player2.OnAttack += PerformAttack;
+        cardFight._player1.OnShieldValueChanged += ChangeShieldValue;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -222,6 +229,10 @@ public class CardFightManager : NetworkBehaviour
                 upright = true;
             }
         }
+        if (e.previousLocation == null)
+            Debug.Log("error with previouslocation");
+        if (e.currentLocation == null)
+            Debug.Log("error with currentlocation");
         RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card, grade, soul, critical, faceup, upright);
     }
 
@@ -304,6 +315,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Drop)
             {
+                Debug.Log("drop here");
                 if (isServer)
                 {
                     if (card.originalOwner == 1)
@@ -326,6 +338,11 @@ public class CardFightManager : NetworkBehaviour
                 Debug.Log("FL: " + FL);
                 if (zone == null)
                     Debug.Log("no unit found");
+            }
+            else if (location == Location.GC)
+            {
+                Debug.Log("gc here");
+                zone = Globals.Instance.guardianCircle.gameObject;
             }
             else
             {
@@ -358,6 +375,10 @@ public class CardFightManager : NetworkBehaviour
             newCard = EnemyHand.transform.GetChild(EnemyHand.transform.childCount - 1).gameObject;
             newCard.transform.SetParent(Field.transform);
         }
+        else if (previousZone == Globals.Instance.guardianCircle.gameObject)
+        {
+            newCard = Globals.Instance.guardianCircle.RemoveCard(card.tempID);
+        }
         else
         {
             newCard = CreateNewCard(card.id, card.tempID);
@@ -379,6 +400,8 @@ public class CardFightManager : NetworkBehaviour
             newCard.GetComponent<Image>().sprite = LoadSprite(FixFileName(card.id));
             newCard.GetComponent<CardBehavior>().card = LookUpCard(card.id);
         }
+        else 
+            newCard.GetComponent<Image>().sprite = LoadSprite(FixFileName(card.id));
 
         Debug.Log(currentZone.name);
         if (currentZone.name.Contains("Enemy"))
@@ -418,6 +441,8 @@ public class CardFightManager : NetworkBehaviour
         {
             currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.grade, soul, critical, card.power, true, true, card.id, newCard);
         }
+        else if (currentZone.GetComponent<GuardianCircle>() != null)
+            currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
         else
         {
             newCard.transform.SetParent(null);
@@ -561,26 +586,31 @@ public class CardFightManager : NetworkBehaviour
     public void PerformAttack(object sender, CardEventArgs e)
     {
         VanguardEngine.Player player = sender as VanguardEngine.Player;
-        RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(player.GetAttackedCards()[0]),
-            e.currentPower, player.CalculatePowerOfUnit(player.GetCircle(player.GetAttackedCards()[0])));
+        Debug.Log(player.GetAttacker().tempID);
+        Debug.Log(player.GetAttackedCards().Count);
+        int booster = -1;
+        if (player.Booster() != null)
+            booster = player.GetCircle(player.Booster());
+        RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(player.GetAttackedCards()[0]), booster);
     }
 
     [ClientRpc]
-    public void RpcPerformAttack(int attackingCircle, int attackedCircle, int power, int shield)
+    public void RpcPerformAttack(int attackingCircle, int attackedCircle, int booster)
     {
+        _attacker = attackingCircle;
+        _attacked.Add(attackedCircle);
+        _booster = booster;
         animations.Add(FlashUnit(attackedCircle));
-        animations.Add(ShowAttack(attackingCircle, attackedCircle, power, shield));
+        animations.Add(ShowAttack());
     }
 
-    IEnumerator ShowAttack(int attackingCircle, int attackedCircle, int power, int shield)
+    IEnumerator ShowAttack()
     {
-        UnitSlots.GetComponent<UnitSlots>().PerformAttack(attackingCircle, attackedCircle);
-        POW.transform.localPosition = new Vector3(-382, 0, 0);
-        SLD.transform.localPosition = new Vector3(382, 0, 0);
-        POW.GetComponent<POWSLD>().SetCount(power);
-        SLD.GetComponent<POWSLD>().SetCount(shield);
+        UnitSlots.GetComponent<UnitSlots>().PerformAttack(_attacker, _attacked[0]);
         POW.GetComponent<POWSLD>().compare = true;
         SLD.GetComponent<POWSLD>().compare = true;
+        POW.GetComponent<POWSLD>().auto = true;
+        SLD.GetComponent<POWSLD>().auto = true;
         inAnimation = false;
         yield return null;
     }
@@ -624,6 +654,22 @@ public class CardFightManager : NetworkBehaviour
                 yield return null;
         }
         inAnimation = false;
+    }
+
+    public void ChangeShieldValue(object sender, CardEventArgs e)
+    {
+        Player player = sender as Player;
+        Debug.Log("updating shield value: " + e.currentShield);
+        RpcChangeShieldValue(e.circle, e.currentShield);
+    }
+
+    [ClientRpc]
+    public void RpcChangeShieldValue(int circle, int shield)
+    {
+        if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
+            UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._shield = shield;
+        else
+            Debug.Log("invalid circle: " + circle);
     }
 
     public static Sprite LoadSprite(string filename)

@@ -14,7 +14,7 @@ public class UnitSlots : MonoBehaviour
 
     void Start()
     {
-
+        Globals.Instance.unitSlots = this;
     }
 
     // Update is called once per frame
@@ -148,6 +148,7 @@ public class UnitSlots : MonoBehaviour
         Debug.Log(_unitSlots[attackingCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
         line.Points = points.ToArray();
         Debug.Log("number of positions: " + line.Points.Length);
+        _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._shield = _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._power;
     }
 
     public void ChangeColor(int circle,  Color color)

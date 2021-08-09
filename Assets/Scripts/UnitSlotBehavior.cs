@@ -13,6 +13,7 @@ public class UnitSlotBehavior : MonoBehaviour
     public int _critical;
     public Text Critical;
     public int _power;
+    public int _shield;
     public Text Power;
     public bool _upright = true;
     public bool _faceup = true;
@@ -107,7 +108,7 @@ public class UnitSlotBehavior : MonoBehaviour
         if (_faceup)
         {
             _faceup = false;
-            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../art/FaceDownCard.jpg");
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../cardart/FaceDownCard.jpg");
             Grade.enabled = false;
             Soul.enabled = false;
             Power.enabled = false;
