@@ -79,8 +79,8 @@ public class PhaseManager : MonoBehaviour
         ResetAll();
         RidePhaseButton.GetComponent<Image>().color = Color.green;
         RidePhaseButton.interactable = true;
-        if (_isActingPlayer)
-            MainPhaseButton.interactable = true;
+        //if (_isActingPlayer)
+        //    MainPhaseButton.interactable = true;
     }
 
     void MainPhase()
@@ -88,10 +88,10 @@ public class PhaseManager : MonoBehaviour
         ResetAll();
         MainPhaseButton.GetComponent<Image>().color = Color.green;
         MainPhaseButton.interactable = true;
-        if (_isActingPlayer && _turnCount > 1)
-            BattlePhaseButton.interactable = true;
-        if (_isActingPlayer && _turnCount == 1)
-            EndPhaseButton.interactable = true;
+        //if (_isActingPlayer && _turnCount > 1)
+        //    BattlePhaseButton.interactable = true;
+        //if (_isActingPlayer && _turnCount == 1)
+        //    EndPhaseButton.interactable = true;
     }
 
     void BattlePhase()
@@ -99,7 +99,7 @@ public class PhaseManager : MonoBehaviour
         ResetAll();
         BattlePhaseButton.GetComponent<Image>().color = Color.green;
         BattlePhaseButton.interactable = true;
-        if (_isActingPlayer)
-            EndPhaseButton.interactable = true;
+        //if (_isActingPlayer)
+        //    EndPhaseButton.interactable = true;
     }
 }

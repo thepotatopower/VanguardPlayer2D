@@ -151,6 +151,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnAttack += PerformAttack;
         cardFight._player2.OnAttack += PerformAttack;
         cardFight._player1.OnShieldValueChanged += ChangeShieldValue;
+        cardFight._player1.OnAttackEnds += EndAttack;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -344,6 +345,22 @@ public class CardFightManager : NetworkBehaviour
                 Debug.Log("gc here");
                 zone = Globals.Instance.guardianCircle.gameObject;
             }
+            else if (location == Location.Trigger)
+            {
+                Debug.Log("trigger here");
+                if (isPlayerAction(card.originalOwner))
+                    zone = Globals.Instance.playerTriggerZone;
+                else
+                    zone = Globals.Instance.enemyTriggerZone;
+            }
+            else if (location == Location.Damage)
+            {
+                Debug.Log("damage here");
+                if (isPlayerAction(card.originalOwner))
+                    zone = Globals.Instance.playerDamageZone;
+                else
+                    zone = Globals.Instance.enemyDamageZone;
+            }
             else
             {
                 inAnimation = false;
@@ -358,7 +375,20 @@ public class CardFightManager : NetworkBehaviour
         if (currentZone == null || previousZone == null)
             yield break;
 
-        if (previousZone == PlayerHand)
+        if (currentZone == Globals.Instance.playerTriggerZone || currentZone == Globals.Instance.enemyTriggerZone)
+        {
+            Field.GetComponent<Board>().inAnimation = true;
+            if (currentZone == Globals.Instance.playerTriggerZone)
+                StartCoroutine(Field.GetComponent<Board>().ZoomInOnTrigger(true));
+            else
+                StartCoroutine(Field.GetComponent<Board>().ZoomInOnTrigger(false));
+            while (Field.GetComponent<Board>().inAnimation)
+                yield return null;
+            yield return new WaitForSecondsRealtime(1);
+            Debug.Log("done zooming in");
+        }
+
+        if (previousZone == PlayerHand || previousZone == Globals.Instance.playerDamageZone || previousZone == Globals.Instance.enemyDamageZone)
         {
             for (int i = 0; i < PlayerHand.transform.childCount; i++)
             {
@@ -379,11 +409,26 @@ public class CardFightManager : NetworkBehaviour
         {
             newCard = Globals.Instance.guardianCircle.RemoveCard(card.tempID);
         }
+        else if (previousZone.name.Contains("Trigger") || previousZone.name.Contains("Damage"))
+        {
+            newCard = previousZone.transform.GetChild(0).gameObject;
+            newCard.transform.SetParent(GameObject.Find("Field").transform);
+        }
         else
         {
             newCard = CreateNewCard(card.id, card.tempID);
             newCard.transform.SetParent(Field.transform);
             newCard.transform.position = previousZone.transform.position;
+            if (previousZone.name.Contains("Enemy"))
+                newCard.transform.Rotate(0, 0, 180);
+            //newCard.transform.localScale = Field.transform.localScale;
+        }
+        newCard.name = card.tempID.ToString();
+
+        if (currentZone.name.Contains("Trigger"))
+        {
+            newCard.transform.Rotate(new Vector3(0, 0, 90));
+            newCard.transform.localScale = newCard.transform.localScale * (float)(8 / 1.2);
         }
 
         if (previousZone.GetComponent<UnitSlotBehavior>() != null)
@@ -413,7 +458,8 @@ public class CardFightManager : NetworkBehaviour
         blankCard.transform.GetComponent<Image>().enabled = false;
 
 
-        if (currentZone == PlayerHand || currentZone == EnemyHand)
+        if (currentZone == PlayerHand || currentZone == EnemyHand ||
+            currentZone == Globals.Instance.playerDamageZone || currentZone == Globals.Instance.enemyDamageZone)
             blankCard.transform.SetParent(currentZone.transform);
         else
         {
@@ -425,7 +471,6 @@ public class CardFightManager : NetworkBehaviour
         if (previousZone.GetComponent<Pile>() != null)
             previousZone.GetComponent<Pile>().RemoveCard(card);
 
-
         float step = 2000 * Time.deltaTime;
         while (Vector3.Distance(newCard.transform.position, blankCard.transform.position) > 0.001f)
         {
@@ -434,8 +479,20 @@ public class CardFightManager : NetworkBehaviour
         }
         GameObject.Destroy(blankCard);
 
+        if (currentZone == Globals.Instance.playerTriggerZone || currentZone == Globals.Instance.enemyTriggerZone)
+        {
+            yield return new WaitForSecondsRealtime(1);
+            Field.GetComponent<Board>().inAnimation = true;
+            StartCoroutine(Field.GetComponent<Board>().ZoomBack());
+            while (Field.GetComponent<Board>().inAnimation)
+                yield return null;
+        }
 
-        if (currentZone == PlayerHand || currentZone == EnemyHand)
+        if (!currentZone.name.Contains("Trigger") && !currentZone.name.Contains("Damage"))
+            newCard.transform.rotation = Quaternion.Euler(0, 0, 0);
+
+
+        if (currentZone.name.Contains("Hand") || currentZone.name.Contains("Trigger"))
             newCard.transform.SetParent(currentZone.transform);
         else if (currentZone.GetComponent<UnitSlotBehavior>() != null)
         {
@@ -443,6 +500,8 @@ public class CardFightManager : NetworkBehaviour
         }
         else if (currentZone.GetComponent<GuardianCircle>() != null)
             currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
+        else if (currentZone.GetComponent<DamageZone>() != null)
+            currentZone.GetComponent<DamageZone>().AddCard(newCard, card.tempID);
         else
         {
             newCard.transform.SetParent(null);
@@ -667,9 +726,36 @@ public class CardFightManager : NetworkBehaviour
     public void RpcChangeShieldValue(int circle, int shield)
     {
         if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
-            UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._shield = shield;
+            animations.Add(UpdateShieldValue(circle, shield));
         else
             Debug.Log("invalid circle: " + circle);
+    }
+
+    IEnumerator UpdateShieldValue(int circle, int shield)
+    {
+        UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._shield = shield;
+        inAnimation = false;
+        yield return null;
+    }
+
+    public void EndAttack(object sender, CardEventArgs e)
+    {
+        RpcEndAttack();
+    }
+
+    [ClientRpc]
+    public void RpcEndAttack()
+    {
+        animations.Add(EndAttackAnimation());
+    }
+
+    IEnumerator EndAttackAnimation()
+    {
+        UnitSlots.GetComponent<UnitSlots>().EndAttack();
+        POW.GetComponent<POWSLD>().Reset();
+        SLD.GetComponent<POWSLD>().Reset();
+        inAnimation = false;
+        yield return null;
     }
 
     public static Sprite LoadSprite(string filename)

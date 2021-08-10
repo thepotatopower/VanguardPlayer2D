@@ -10,6 +10,10 @@ public class Globals : MonoBehaviour
     public VisualInputManager visualInputManager;
     public GuardianCircle guardianCircle;
     public UnitSlots unitSlots;
+    public GameObject playerTriggerZone;
+    public GameObject enemyTriggerZone;
+    public GameObject playerDamageZone;
+    public GameObject enemyDamageZone;
     public Button selectionButton1;
     public Button selectionButton2;
     public Vector2 ResetPosition;

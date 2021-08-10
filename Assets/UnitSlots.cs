@@ -11,6 +11,7 @@ public class UnitSlots : MonoBehaviour
     // Start is called before the first frame update
     GameObject[] _unitSlots;
     int _playerID;
+    public UILineRenderer lineRendererPrefab;
 
     void Start()
     {
@@ -141,7 +142,9 @@ public class UnitSlots : MonoBehaviour
     public void PerformAttack(int attackingCircle, int attackedCircle)
     {
         Debug.Log("performing attack");
-        UILineRenderer line = GameObject.Find("LineRenderer").GetComponent<UILineRenderer>();
+        UILineRenderer line = GameObject.Instantiate(lineRendererPrefab);
+        line.transform.SetParent(GameObject.Find("Field").transform);
+        line.transform.localPosition = new Vector3(-800, -450, 0);
         List<Vector2> points = new List<Vector2>();
         points.Add(_unitSlots[attackingCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
         points.Add(_unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>().unit.transform.position);
@@ -151,11 +154,22 @@ public class UnitSlots : MonoBehaviour
         _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._shield = _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._power;
     }
 
-    public void ChangeColor(int circle,  Color color)
+    public void EndAttack()
     {
-        if (_unitSlots[circle] != null)
+        GameObject field = GameObject.Find("Field");
+        GameObject line;
+        while (field.GetComponentsInChildren<UILineRenderer>().Length > 0)
         {
-            _unitSlots[circle].GetComponentInChildren<UnitSelectArea>().GetComponent<Image>().color = color;
+            line = field.GetComponentsInChildren<UILineRenderer>()[0].gameObject;
+            line.transform.SetParent(null);
+            GameObject.Destroy(line);
+        }
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null)
+            {
+                _unitSlots[i].GetComponent<UnitSlotBehavior>()._shield = 0;
+            }
         }
     }
 }

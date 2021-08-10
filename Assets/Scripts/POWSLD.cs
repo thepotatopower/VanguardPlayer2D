@@ -96,4 +96,11 @@ public class POWSLD : MonoBehaviour
         }
         _count = value;
     }
+
+    public void Reset()
+    {
+        compare = false;
+        auto = false;
+        this.transform.localPosition = Globals.Instance.ResetPosition;
+    }
 }
