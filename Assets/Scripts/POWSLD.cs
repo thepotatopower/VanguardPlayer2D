@@ -16,7 +16,7 @@ public class POWSLD : MonoBehaviour
 
     void Start()
     {
-
+        this.transform.position = Globals.Instance.ResetPosition;
     }
 
     // Update is called once per frame

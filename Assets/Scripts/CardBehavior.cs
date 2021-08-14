@@ -50,7 +50,7 @@ public class CardBehavior : MonoBehaviour
         string effect;
         if (originalPosition == new Vector3(0, 0, 0))
             originalPosition = this.transform.position;
-        if (this.faceup)
+        if (this.cardID != "" && (this.faceup || (!this.faceup && this.transform.parent != GameObject.Find("EnemyHand").transform && !this.transform.parent.name.Contains("Deck"))))
         {
             ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
             card = cardFightManager.LookUpCard(cardID);
@@ -103,7 +103,7 @@ public class CardBehavior : MonoBehaviour
                 }
             }
             if (selectable)
-                inputManager.CardClicked(Card);
+                inputManager.OnCardClicked(Card);
         }
     }
 

@@ -42,7 +42,7 @@ public class UnitSelectArea : MonoBehaviour
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
         {
             Debug.Log("unit clicked");
-            inputManager.GetComponent<VisualInputManager>().UnitClicked(unitSlot._FL, unitSlot.unit, isSelectable);
+            inputManager.GetComponent<VisualInputManager>().OnUnitClicked(unitSlot._FL, unitSlot.unit, isSelectable);
         }
     }
 

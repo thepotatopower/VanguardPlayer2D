@@ -17,10 +17,11 @@ public class VisualInputManager : NetworkBehaviour
     public Button mulliganButton;
     public Button yesButton;
     public Button noButton;
-    public Button toggleCardSelect;
+    public Button toggle;
     public Button cardButton;
     public Button rideFromRideDeck;
     public Button cancelButton;
+    public Button viewButton;
     public GameObject PlayerBackRight;
     public GameObject PlayerBackMiddle;
     public GameObject PlayerBackLeft;
@@ -39,7 +40,9 @@ public class VisualInputManager : NetworkBehaviour
     public GameObject UnitSlots;
     public GameObject POW;
     public GameObject SLD;
+    public GameObject Buttons;
     public CardSelect cardSelect;
+    public CardSelect cardViewer;
     public IM inputManager;
     public Thread currentThread;
     public PlayerManager playerManager;
@@ -70,10 +73,14 @@ public class VisualInputManager : NetworkBehaviour
     public bool bool1 = false;
     [SyncVar]
     public int int1 = 0;
+    [SyncVar]
+    public int int2 = 0;
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<string> cardIDs = new SyncList<string>();
     public SyncList<string> strings = new SyncList<string>();
+    public SyncList<bool> faceup = new SyncList<bool>();
+    public SyncList<bool> upright = new SyncList<bool>();
     public bool receivedInput = false;
     public bool cardsAreSelectable = false;
     public bool cardsAreHoverable = true;
@@ -82,8 +89,16 @@ public class VisualInputManager : NetworkBehaviour
     public EventSystem eventSystem;
     int selectedCard = -1;
     int selectedUnit = -1;
+    GameObject selectedGameObject = null;
     List<Button> miscellaneousButtons;
     bool clicked = false;
+    bool browsingField = false;
+    Vector3 currentMessageBoxPosition;
+    Vector3 currentYesPosition;
+    Vector3 currentNoPosition;
+    Vector3 currentCardSelectPosition;
+    Vector3 currentSelectionButton1Position;
+    Vector3 currentSelectionButton2Position;
     WaitForUIButtons waitForButton;
 
     //VanguardEngine's InputManager logic
@@ -170,12 +185,15 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.strings.Clear();
+            inputManager.faceup.Clear();
+            inputManager.upright.Clear();
             intlist_input.Clear();
             foreach (Card card in cardsToSelect)
             {
                 inputManager.tempIDs.Add(card.tempID);
                 inputManager.cardIDs.Add(card.id);
                 location = "<>";
+                //Debug.Log(_player1.GetLocation(card));
                 switch (_player1.GetLocation(card))
                 {
                     case Location.RC:
@@ -187,8 +205,13 @@ public class VisualInputManager : NetworkBehaviour
                     case Location.Hand:
                         location = "<Hand>";
                         break;
+                    case Location.RideDeck:
+                        location = "<RideDeck>";
+                        break;
                 }
                 inputManager.strings.Add(location);
+                inputManager.faceup.Add(_player1.IsFaceUp(card));
+                inputManager.upright.Add(_player1.IsUpRight(card));
             }
             inputManager.inputSignal = InputType.SelectFromList;
             WaitForReadyToContinue();
@@ -221,7 +244,7 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
-            inputManager.input1 = _player1.Turn;
+            inputManager.int1 = _player1.Turn;
             if (_player1.CanCallRearguard())
             {
                 foreach (Card card in _player1.GetCallableRearguards())
@@ -302,6 +325,12 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
+            inputManager.query = "Choose unit to give +";
+            inputManager.query += value;
+            if (prompt == PromptType.AddCritical)
+                inputManager.query += " critical.";
+            else if (prompt == PromptType.AddPower)
+                inputManager.query += " power.";
             foreach (Card card in _player1.GetActiveUnits())
             {
                 inputManager.cardIDs.Add(card.id);
@@ -348,14 +377,20 @@ public class VisualInputManager : NetworkBehaviour
         scissorsButton.transform.position = new Vector3(10000, 0, 0);
         messageBox = GameObject.Find("MessageBox");
         messageBox.transform.position = new Vector3(10000, 0, 0);
+        currentMessageBoxPosition = messageBox.transform.position;
         mulliganButton = GameObject.Find("Mulligan").GetComponent<Button>();
         mulliganButton.transform.position = new Vector3(10000, 0, 0);
         yesButton = GameObject.Find("YesButton").GetComponent<Button>();
         yesButton.transform.position = new Vector3(10000, 0, 0);
+        currentYesPosition = yesButton.transform.position;
         noButton = GameObject.Find("NoButton").GetComponent<Button>();
         noButton.transform.position = new Vector3(10000, 0, 0);
-        toggleCardSelect = GameObject.Find("ToggleCardSelect").GetComponent<Button>();
-        toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
+        currentNoPosition = noButton.transform.position;
+        currentCardSelectPosition = cardSelect.transform.position;
+        currentSelectionButton1Position = Globals.Instance.selectionButton1.transform.position;
+        currentSelectionButton2Position = Globals.Instance.selectionButton2.transform.position;
+        toggle = GameObject.Find("Toggle").GetComponent<Button>();
+        toggle.transform.position = new Vector3(10000, 0, 0);
         cardButton.transform.position = new Vector3(10000, 0, 0);
         rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
         cancelButton.transform.position = new Vector3(10000, 0, 0);
@@ -408,10 +443,6 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(YesNo());
                     break;
-                case InputType.SelectCardsFromHand:
-                    receivedInput = true;
-                    StartCoroutine(SelectCardsFromHand());
-                    break;
                 case InputType.SelectFromList:
                     receivedInput = true;
                     StartCoroutine(SelectFromList());
@@ -448,15 +479,26 @@ public class VisualInputManager : NetworkBehaviour
         }
         if (Input.GetMouseButtonDown(0))
         {
-            foreach (Button button in miscellaneousButtons)
+            bool buttonClicked = false;
+            for (int i = 0; i < Buttons.transform.childCount; i++)
             {
-                if (button.transform.position.x < 5000 && eventSystem.currentSelectedGameObject != button.gameObject)
+                if (eventSystem.currentSelectedGameObject == Buttons.transform.GetChild(i).gameObject)
                 {
-                    ResetMiscellaneousButtons();
+                    buttonClicked = true;
                     break;
                 }
-
             }
+            if (!buttonClicked)
+                ResetMiscellaneousButtons();
+            //foreach (Button button in miscellaneousButtons)
+            //{
+            //    if (button.transform.position.x < 5000 && eventSystem.currentSelectedGameObject != button.gameObject)
+            //    {
+            //        ResetMiscellaneousButtons();
+            //        break;
+            //    }
+
+            //}
         }
     }
 
@@ -483,7 +525,6 @@ public class VisualInputManager : NetworkBehaviour
         public const int ResolveRPS = 3;
         public const int Mulligan = 4;
         public const int YesNo = 5;
-        public const int SelectCardsFromHand = 8;
         public const int SelectFromList = 9;
         public const int SelectRidePhaseAction = 10;
         public const int SelectMainPhaseAction = 11;
@@ -499,25 +540,13 @@ public class VisualInputManager : NetworkBehaviour
         player1_input = -1;
         player2_input = -1;
         bool1 = false;
-        clicked = false;
         if (waitForButton != null)
         {
             waitForButton.Reset();
             waitForButton.Dispose();
         }
-        rockButton.transform.position = new Vector3(10000, 0, 0);
-        paperButton.transform.position = new Vector3(10000, 0, 0);
-        scissorsButton.transform.position = new Vector3(10000, 0, 0);
-        messageBox.transform.position = new Vector3(10000, 0, 0);
-        mulliganButton.transform.position = new Vector3(10000, 0, 0);
-        yesButton.transform.position = new Vector3(10000, 0, 0);
-        noButton.transform.position = new Vector3(10000, 0, 0);
-        toggleCardSelect.transform.position = new Vector3(10000, 0, 0);
-        cancelButton.transform.position = new Vector3(10000, 0, 0);
-        Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
-        Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
-        ResetMiscellaneousButtons();
-        miscellaneousButtons.Clear();
+        ResetPositions();
+        UnitSlots.GetComponent<UnitSlots>().Reset();
         cardSelect.Hide();
         cardSelect.ResetItems();
         cardsAreSelectable = false;
@@ -681,6 +710,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
@@ -714,43 +744,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
-        }
-    }
-
-    IEnumerator SelectCardsFromHand()
-    {
-        Card card;
-        while (cardFightManager.InAnimation())
-        {
-            yield return null;
-        }
-        if (isActingPlayer())
-        {
-            cardSelect.Show();
-            cardSelect.Initialize("Discard " + count + " card(s).", count, count);
-            for (int i = 0; i < tempIDs.Count; i++)
-            {
-                card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name);
-            }
-            toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
-            int selection = -1;
-            waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
-            while (selection < 0)
-            {
-                if (waitForButton.PressedButton == cardSelect.SelectButton)
-                    selection = 0;
-                yield return null;
-            }
-            waitForButton.Reset();
-            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-            playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdChangeInputs(cardSelect.selected);
-        }
-        else
-        {
-            messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            toggle.transform.localPosition = Globals.Instance.TogglePosition;
         }
     }
 
@@ -761,6 +755,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             cardSelect.Show();
@@ -768,9 +763,8 @@ public class VisualInputManager : NetworkBehaviour
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name);
+                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, faceup[i], upright[i], strings[i]);
             }
-            toggleCardSelect.transform.localPosition = new Vector3(0, -300, 0);
             int selection = -1;
             waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
             while (selection < 0)
@@ -799,6 +793,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             for (int i = 0; i < tempIDs.Count; i++)
@@ -846,6 +841,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             for (int i = 0; i < tempIDs.Count; i++)
@@ -904,6 +900,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             for (int i = 0; i < tempIDs.Count; i++)
@@ -926,7 +923,6 @@ public class VisualInputManager : NetworkBehaviour
                         selection2 = selectedCard;
                         POW.transform.localPosition = new Vector3(-382, 0, 0);
                         POW.GetComponent<POWSLD>().SetCount(UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponent<UnitSlotBehavior>()._power);
-                        UnitSlots.GetComponent<UnitSlots>().Reset();
                     }
                 }
                 else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton)
@@ -954,6 +950,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         clicked = false;
         if (isActingPlayer())
         {
@@ -980,6 +977,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             for (int i = 0; i < tempIDs.Count; i++)
@@ -1034,8 +1032,10 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
+            toggle.transform.localPosition = new Vector3(0, -300, 0);
             Button selectionButton1 = GameObject.Find("SelectionButton1").GetComponent<Button>();
             Button selectionButton2 = GameObject.Find("SelectionButton2").GetComponent<Button>();
             int selection = -1;
@@ -1075,6 +1075,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
             for (int i = 0; i < tempIDs.Count; i++)
@@ -1086,6 +1087,8 @@ public class VisualInputManager : NetworkBehaviour
             miscellaneousButtons.Clear();
             miscellaneousButtons.Add(cardButton);
             waitForButton = new WaitForUIButtons(cardButton);
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = query;
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == cardButton)
@@ -1146,76 +1149,231 @@ public class VisualInputManager : NetworkBehaviour
 
     public void ResetMiscellaneousButtons()
     {
-        rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
-        cardButton.transform.position = new Vector3(10000, 0, 0);
+        GameObject button;
+        while (Buttons.transform.childCount > 0)
+        {
+            button = Buttons.transform.GetChild(0).gameObject;
+            button.transform.SetParent(null);
+            button.transform.position = Globals.Instance.ResetPosition;
+        }
+        //rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
+        //cardButton.transform.position = new Vector3(10000, 0, 0);
     }
 
-    public void SpawnRideFromRideDeckButton()
+    public void OnPlayerRideDeckClicked()
     {
-        if (inputSignal == InputType.SelectRidePhaseAction && bool1)
+        if (cardFightManager != null && !cardFightManager.InAnimation())
         {
             GameObject rideDeck = GameObject.Find("PlayerRideDeck");
-            rideFromRideDeck.transform.position = new Vector3(rideDeck.transform.position.x, rideDeck.transform.position.y + ((rideDeck.transform.localScale.y / (float)2) + (rideFromRideDeck.transform.localScale.y * (float)1.25)), 0);
+            Buttons.transform.position = new Vector3(rideDeck.transform.position.x, rideDeck.transform.position.y + ((rideDeck.transform.localScale.y / (float)2) + (rideFromRideDeck.transform.localScale.y * (float)1.25)), 0);
+        }
+        if (inputSignal == InputType.SelectRidePhaseAction && bool1)
+        {
+            rideFromRideDeck.transform.SetParent(Buttons.transform);
         }
     }
 
-    public void CardClicked(GameObject card)
+    public void OnPlayerDropZoneClicked()
     {
+        if (browsingField && cardFightManager != null && !cardFightManager.InAnimation())
+        {
+            GameObject drop = GameObject.Find("PlayerDropZone");
+            if (drop.GetComponent<Pile>().pile.Count == 0)
+                return;
+            Buttons.transform.position = drop.transform.position;
+            viewButton.transform.SetParent(Buttons.transform);
+            selectedGameObject = drop;
+        }
+    }
+
+    public void OnEnemyDropZoneClicked()
+    {
+        if (browsingField && cardFightManager != null && !cardFightManager.InAnimation())
+        {
+            GameObject drop = GameObject.Find("EnemyDropZone");
+            if (drop.GetComponent<Pile>().pile.Count == 0)
+                return;
+            Buttons.transform.position = drop.transform.position;
+            viewButton.transform.SetParent(Buttons.transform);
+            selectedGameObject = drop;
+        }
+    }
+
+    public void OnViewButtonClicked()
+    {
+        ResetMiscellaneousButtons();
+        if (selectedGameObject == null)
+            return;
+        if (selectedGameObject == GameObject.Find("PlayerDropZone"))
+        {
+            Pile drop = GameObject.Find("PlayerDropZone").GetComponent<Pile>();
+            cardViewer.Show();
+            cardViewer.Initialize("Player Drop Zone", 0, 0);
+            foreach (Card card in drop.pile)
+            {
+                cardViewer.AddCardSelectItem(-1, card.id, card.name, true, true, "");
+            }
+        }
+        else if (selectedGameObject == GameObject.Find("EnemyDropZone"))
+        {
+            Pile drop = GameObject.Find("EnemyDropZone").GetComponent<Pile>();
+            cardViewer.Show();
+            cardViewer.Initialize("Enemy Drop Zone", 0, 0);
+            foreach (Card card in drop.pile)
+            {
+                cardViewer.AddCardSelectItem(-1, card.id, card.name, true, true, "");
+            }
+        }
+        else if (selectedGameObject.GetComponent<UnitSlotBehavior>() != null)
+        {
+            cardViewer.Show();
+            cardViewer.Initialize("Soul", 0, 0);
+            foreach (Card card in selectedGameObject.GetComponent<UnitSlotBehavior>()._soul)
+            {
+                cardViewer.AddCardSelectItem(-1, card.id, card.name, true, true, "");
+            }
+        }
+        selectedGameObject = null;
+    }
+
+    public void OnCardViewerCancelClicked()
+    {
+        cardViewer.Hide();
+        cardViewer.ResetItems();
+    }
+
+    public void OnCardClicked(GameObject card)
+    {
+        if (cardFightManager != null && !cardFightManager.InAnimation())
+        {
+            Buttons.transform.position = new Vector3(card.transform.position.x, card.transform.position.y + 100, 0);
+        }
         if (inputSignal == InputType.SelectRidePhaseAction && miscellaneousButtons.Contains(cardButton))
         {
             cardButton.transform.GetComponentInChildren<Text>().text = "Ride";
-            cardButton.transform.position = new Vector3(card.transform.position.x, card.transform.position.y + 100, 0);
+            cardButton.transform.SetParent(Buttons.transform);
             Debug.Log(card.name);
             selectedCard = Int32.Parse(card.name);
         }
         else if (inputSignal == InputType.SelectMainPhaseAction && miscellaneousButtons.Contains(cardButton))
         {
             cardButton.transform.GetComponentInChildren<Text>().text = "Call";
-            cardButton.transform.position = new Vector3(card.transform.position.x, card.transform.position.y + 100, 0);
+            cardButton.transform.SetParent(Buttons.transform);
             Debug.Log(card.name);
             selectedCard = Int32.Parse(card.name);
         }
     }
 
-    public void UnitClicked(int unitSlot, GameObject unit, bool selected)
+    public void OnUnitClicked(int unitSlot, GameObject unit, bool selected)
     {
+        if (cardFightManager != null && !cardFightManager.InAnimation() && unit != null)
+        {
+            Buttons.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+        }
+        else
+            return;
         if (inputSignal == InputType.SelectCallLocation)
         {
             selectedUnit = unitSlot;
             clicked = true;
         }
-        else if (inputSignal == InputType.SelectMainPhaseAction)
+        if (inputSignal == InputType.SelectMainPhaseAction)
         {
             if (unit != null)
             {
                 cardButton.transform.GetComponentInChildren<Text>().text = "Move";
-                cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+                cardButton.transform.SetParent(Buttons.transform);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);
                 selectedUnit = unitSlot;
             }
         }
-        else if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
+        if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
         {
             if (unit != null && selected)
             {
                 cardButton.transform.GetComponentInChildren<Text>().text = "Attack";
-                cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+                cardButton.transform.SetParent(Buttons.transform);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);
                 selectedUnit = unitSlot;
             }
         }
-        else if (inputSignal == InputType.SelectActiveUnit)
+        if (inputSignal == InputType.SelectActiveUnit)
         {
             if (unit != null && selected)
             {
                 cardButton.transform.GetComponentInChildren<Text>().text = "Select";
-                cardButton.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+                cardButton.transform.SetParent(Buttons.transform);
                 Debug.Log(unit.name);
                 selectedCard = Int32.Parse(unit.name);
                 selectedUnit = unitSlot;
             }
         }
+        if (browsingField && Globals.Instance.unitSlots.GetUnitSlot(unitSlot).GetComponent<UnitSlotBehavior>()._soul.Count > 0)
+        {
+            viewButton.transform.SetParent(Buttons.transform);
+            selectedGameObject = Globals.Instance.unitSlots.GetUnitSlot(unitSlot);
+        }
+    }
+
+    public void ToggleClicked()
+    {
+        if (browsingField)
+        {
+            messageBox.transform.position = currentMessageBoxPosition;
+            yesButton.transform.position = currentYesPosition;
+            noButton.transform.position = currentNoPosition;
+            cardSelect.transform.position = currentCardSelectPosition;
+            Globals.Instance.selectionButton1.transform.position = currentSelectionButton1Position;
+            Globals.Instance.selectionButton2.transform.position = currentSelectionButton2Position;
+            browsingField = false;
+        }
+        else
+        {
+            currentMessageBoxPosition = messageBox.transform.position;
+            currentYesPosition = yesButton.transform.position;
+            currentNoPosition = noButton.transform.position;
+            currentCardSelectPosition = cardSelect.transform.position;
+            currentSelectionButton1Position = Globals.Instance.selectionButton1.transform.position;
+            currentSelectionButton2Position = Globals.Instance.selectionButton2.transform.position;
+            messageBox.transform.position = Globals.Instance.ResetPosition;
+            yesButton.transform.position = Globals.Instance.ResetPosition;
+            noButton.transform.position = Globals.Instance.ResetPosition;
+            cardSelect.transform.position = Globals.Instance.ResetPosition;
+            Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
+            Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
+            ResetMiscellaneousButtons();
+            selectedGameObject = null;
+            OnCardViewerCancelClicked();
+            browsingField = true;
+        }
+    }
+
+    public void ResetPositions()
+    {
+        clicked = false;
+        browsingField = false;
+        selectedGameObject = null;
+        rockButton.transform.position = new Vector3(10000, 0, 0);
+        paperButton.transform.position = new Vector3(10000, 0, 0);
+        scissorsButton.transform.position = new Vector3(10000, 0, 0);
+        messageBox.transform.position = new Vector3(10000, 0, 0);
+        mulliganButton.transform.position = new Vector3(10000, 0, 0);
+        yesButton.transform.position = new Vector3(10000, 0, 0);
+        noButton.transform.position = new Vector3(10000, 0, 0);
+        toggle.transform.position = new Vector3(10000, 0, 0);
+        cancelButton.transform.position = new Vector3(10000, 0, 0);
+        cardViewer.Hide();
+        cardViewer.ResetItems();
+        viewButton.transform.position = Globals.Instance.ResetPosition;
+        currentMessageBoxPosition = Globals.Instance.ResetPosition;
+        currentYesPosition = Globals.Instance.ResetPosition;
+        currentNoPosition = Globals.Instance.ResetPosition;
+        currentCardSelectPosition = Globals.Instance.ResetPosition;
+        Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
+        Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
+        ResetMiscellaneousButtons();
+        miscellaneousButtons.Clear();
     }
 }

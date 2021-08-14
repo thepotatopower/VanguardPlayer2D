@@ -22,7 +22,7 @@ public class GuardianCircle : MonoBehaviour
     public void AddCard(GameObject card, int tempID)
     {
         card.transform.SetParent(this.transform);
-        card.transform.Rotate(new Vector3(0, 0, 90));
+        card.transform.Rotate(new Vector3(0, 0, -90));
         card.name = tempID.ToString();
     }
 

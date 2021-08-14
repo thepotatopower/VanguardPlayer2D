@@ -78,31 +78,45 @@ public class UnitSlots : MonoBehaviour
         CardFightManager cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
         UnitSlotBehavior previous = _unitSlots[previousFL].GetComponent<UnitSlotBehavior>();
         UnitSlotBehavior current = _unitSlots[currentFL].GetComponent<UnitSlotBehavior>();
+        GameObject newUnit;
         if (current.unit == null)
         {
             Debug.Log("current is null");
-            current.AddCard(previous._grade, previous._soul, previous._critical, previous._power, previous._upright, previous._faceup, previous._cardID, cardFightManager.CreateNewCard(previous._cardID, Int32.Parse(previous.unit.name)));
-            previous.RemoveCard(previous._cardID);
+            previous.DisableCard();
+            newUnit = previous.RemoveCard(Int32.Parse(previous.unit.name));
+            if (newUnit == null)
+                return;
+            current.AddCard(previous._grade, previous._critical, previous._power, previous._originalPower, previous._upright, previous._faceup, previous._cardID, newUnit);
             return;
         }
         else if (previous.unit == null)
         {
-            previous.AddCard(current._grade, current._soul, current._critical, current._power, current._upright, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
-            current.RemoveCard(current._cardID);
+            Debug.Log("previous is null");
+            current.DisableCard();
+            newUnit = current.RemoveCard(Int32.Parse(current.unit.name));
+            if (newUnit == null)
+                return;
+            previous.AddCard(current._grade, current._critical, current._power, current._originalPower, current._upright, current._faceup, current._cardID, newUnit);
             return;
         }
         else if (previous.unit == null && current.unit == null)
             return;
         int tempGrade = previous._grade;
         int tempCritical = previous._critical;
-        int tempSoul = previous._soul;
+        List<Card> tempSoul = previous._soul;
         int tempPower = previous._power;
+        int tempOriginalPower = previous._originalPower;
         string tempCardID = previous._cardID;
         bool tempFaceUp = previous._faceup;
         bool tempUpRight = previous._upright;
         string tempID = previous.unit.name;
-        previous.AddCard(current._grade, current._soul, current._critical, current._power, current._upright, current._faceup, current._cardID, cardFightManager.CreateNewCard(current._cardID, Int32.Parse(current.unit.name)));
-        current.AddCard(tempGrade, tempSoul, tempCritical, tempPower, tempUpRight, tempFaceUp, tempCardID, cardFightManager.CreateNewCard(tempCardID, Int32.Parse(tempID)));
+        previous.DisableCard();
+        current.DisableCard();
+        GameObject tempUnit = previous.RemoveCard(Int32.Parse(previous.unit.name));
+        previous._soul.AddRange(current._soul);
+        previous.AddCard(current._grade, current._critical, current._power, current._originalPower, current._upright, current._faceup, current._cardID, current.RemoveCard(Int32.Parse(current.unit.name)));
+        current._soul.AddRange(tempSoul);
+        current.AddCard(tempGrade, tempCritical, tempPower, tempOriginalPower, tempUpRight, tempFaceUp, tempCardID, tempUnit);
     }
 
     public void Hide(int FL)
@@ -141,7 +155,7 @@ public class UnitSlots : MonoBehaviour
 
     public void PerformAttack(int attackingCircle, int attackedCircle)
     {
-        Debug.Log("performing attack");
+        Debug.Log("performing attack. attackingCircle: " + attackingCircle + ", attackedCircle: " + attackedCircle);
         UILineRenderer line = GameObject.Instantiate(lineRendererPrefab);
         line.transform.SetParent(GameObject.Find("Field").transform);
         line.transform.localPosition = new Vector3(-800, -450, 0);
@@ -171,5 +185,15 @@ public class UnitSlots : MonoBehaviour
                 _unitSlots[i].GetComponent<UnitSlotBehavior>()._shield = 0;
             }
         }
+    }
+
+    public bool IsUnit(string cardID)
+    {
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null && _unitSlots[i].GetComponent<UnitSlotBehavior>()._cardID == cardID && _unitSlots[i].GetComponent<UnitSlotBehavior>().unit != null)
+                return true;
+        }
+        return false;
     }
 }

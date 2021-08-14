@@ -14,6 +14,7 @@ public class Globals : MonoBehaviour
     public GameObject enemyTriggerZone;
     public GameObject playerDamageZone;
     public GameObject enemyDamageZone;
+    public GameObject cardPrefab;
     public Button selectionButton1;
     public Button selectionButton2;
     public Vector2 ResetPosition;
@@ -21,6 +22,7 @@ public class Globals : MonoBehaviour
     public Vector2 SLDPosition;
     public Vector2 YesPosition;
     public Vector2 NoPosition;
+    public Vector2 TogglePosition;
 
     // Start is called before the first frame update
     void Start()
@@ -36,6 +38,7 @@ public class Globals : MonoBehaviour
         SLDPosition = new Vector2(382, 0);
         YesPosition = new Vector2(-120, -110);
         NoPosition = new Vector2(120, -110);
+        TogglePosition = new Vector2(0, -300);
     }
 
     // Update is called once per frame

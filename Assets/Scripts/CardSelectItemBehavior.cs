@@ -9,6 +9,7 @@ public class CardSelectItemBehavior : MonoBehaviour
     CardFightManager cardFightManager;
     CardSelect cardSelect;
     public string cardID;
+    public int tempID;
     public bool selected = false;
     public Color32 defaultColor;
     
@@ -39,7 +40,7 @@ public class CardSelectItemBehavior : MonoBehaviour
         {
             this.GetComponent<Image>().color = new Color32(195, 243, 250, 0);
             selected = false;
-            cardSelect.ItemDeselected(int.Parse(this.name));
+            cardSelect.ItemDeselected(tempID);
         }
         else
         {
@@ -47,7 +48,7 @@ public class CardSelectItemBehavior : MonoBehaviour
             {
                 this.GetComponent<Image>().color = new Color32(92, 233, 255, 255);
                 selected = true;
-                cardSelect.ItemSelected(int.Parse(this.name));
+                cardSelect.ItemSelected(tempID);
             }
         }
     }

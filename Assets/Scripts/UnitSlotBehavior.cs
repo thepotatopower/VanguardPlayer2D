@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using VanguardEngine;
@@ -8,11 +9,11 @@ public class UnitSlotBehavior : MonoBehaviour
 {
     public int _grade;
     public Text Grade;
-    public int _soul;
     public Text Soul;
     public int _critical;
     public Text Critical;
     public int _power;
+    public int _originalPower;
     public int _shield;
     public Text Power;
     public bool _upright = true;
@@ -22,18 +23,55 @@ public class UnitSlotBehavior : MonoBehaviour
     public int slot;
     public bool inAnimation = false;
     public int _FL;
+    public List<Card> _soul;
+    bool showStats = false;
+
+    private void Start()
+    {
+        _soul = new List<Card>();
+    }
+
+    private void Update()
+    {
+        if (showStats)
+        {
+            Power.text = _power.ToString();
+            if (_power > _originalPower)
+                Power.color = Color.cyan;
+            else if (_power < _originalPower)
+                Power.color = Color.red;
+            else
+                Power.color = Color.white;
+            Critical.text = "C:" + _critical.ToString();
+            if (_critical < 1)
+                Critical.color = Color.red;
+            else if (_critical > 1)
+                Critical.color = Color.cyan;
+            else
+                Critical.color = Color.white;
+            Soul.text = "S:" + _soul.Count;
+        }
+        else
+        {
+            Power.text = "";
+            Critical.text = "";
+            Soul.text = "";
+            Grade.text = "";
+        }
+    }
 
     public void Initialize(int FL)
     {
         _FL = FL;
     }
 
-    public void AddCard(int grade, int soul, int critical, int power, bool upright, bool faceup, string cardID, GameObject card)
+    public void AddCard(int grade, int critical, int power, int originalPower, bool upright, bool faceup, string cardID, GameObject card)
     {
+        showStats = true;
         _grade = grade;
-        _soul = soul;
         _critical = critical;
         _power = power;
+        _originalPower = originalPower;
         _upright = upright;
         _faceup = faceup;
         _cardID = cardID;
@@ -42,7 +80,11 @@ public class UnitSlotBehavior : MonoBehaviour
         unit.transform.SetParent(this.transform);
         unit.transform.SetAsFirstSibling();
         unit.transform.localPosition = new Vector3(0, 0, 0);
-        if (this.transform.name.Contains("Enemy"))
+        unit.transform.localScale = Vector3.one / (float)1.1;
+        unit.transform.localRotation = Quaternion.Euler(Vector3.zero);
+        if (!upright)
+            unit.transform.Rotate(new Vector3(0, -90, 0));
+        if (this.transform.name.Contains("Enemy")) 
             unit.transform.Rotate(new Vector3(0, 0, 180));
         Grade.text = "G" + _grade;
         Soul.text = "S:" + _soul;
@@ -58,7 +100,7 @@ public class UnitSlotBehavior : MonoBehaviour
         }
         else
         {
-            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../art/FaceDownCard.jpg");
+            unit.GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
             Grade.enabled = false;
             Soul.enabled = false;
             Power.enabled = false;
@@ -77,18 +119,27 @@ public class UnitSlotBehavior : MonoBehaviour
             unit.transform.Rotate(new Vector3(0, 0, 180));
     }
 
-    public void RemoveCard(string cardID)
+    public GameObject RemoveCard(int tempID)
     {
-        if (cardID == _cardID)
+        GameObject removedCard = null;
+        showStats = false;
+        if (tempID == Int32.Parse(unit.name) && unit != null)
         {
-            GameObject.Destroy(unit);
+            _soul.Clear();
+            removedCard = unit;
+            Vector3 currentPosition = removedCard.transform.position;
+            unit.transform.SetParent(GameObject.Find("Field").transform);
+            unit.transform.position = currentPosition;
             unit = null;
-            Grade.text = "";
-            Critical.text = "";
-            Soul.text = "";
-            Power.text = "";
         }
+        return removedCard;
     }
+
+    public void DisableCard()
+    {
+        showStats = false;
+    }
+
 
     public IEnumerator Flip()
     {
@@ -141,11 +192,11 @@ public class UnitSlotBehavior : MonoBehaviour
         Quaternion Zero = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z);
         if (_upright && !upright)
         {
-            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z + 90);
+            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z - 90);
         }
         else if (!_upright && upright)
         {
-            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z - 90);
+            Ninety = Quaternion.Euler(unit.transform.localRotation.eulerAngles.x, unit.transform.localRotation.eulerAngles.y, unit.transform.localRotation.eulerAngles.z + 90);
         }
         else
         {

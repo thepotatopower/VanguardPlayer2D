@@ -10,11 +10,18 @@ public class Pile : NetworkBehaviour
     public PlayerManager playerManager;
     public Text pileCount;
     public List<Card> pile = new List<Card>();
-    public List<Sprite> sprites = new List<Sprite>();
-    bool addToTop = false;
+    public CardBehavior topCard;
+    public bool addToTop = false;
     int _count = 0;
 
     // Update is called once per frame
+
+    private void Start()
+    {
+        topCard.GetComponent<Image>().enabled = false;
+        topCard.cardID = "";
+    }
+
     void Update()
     {
         //if (deck != null)
@@ -23,74 +30,58 @@ public class Pile : NetworkBehaviour
         //}
     }
 
-    public void UpdateCount(int count) //change count value
+    public void InitializeCount(int count) //change count value
     {
         _count = count;
         pileCount.text = _count.ToString();
+        if (_count > 0)
+        {
+            topCard.GetComponent<Image>().enabled = true;
+        }
     }
 
-    public void CountChange(int count) //increment count by specific value
+    public void UpdateCount(int count) //increment count by specific value
     {
         _count += count;
         pileCount.text = _count.ToString();
     }
 
-    public void AddCard(Card card, Sprite sprite)
+    public void AddCard(Card card)
     {
         pile.Add(card);
-        sprites.Add(sprite);
-        if (pile.Count > 0)
-        {
-            if (addToTop)
-                ChangeSprite(sprites[sprites.Count - 1]);
-            else
-                ChangeSprite(LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg"));
-        }
-        CountChange(1);
+        UpdateCount(1);
+        topCard.GetComponent<Image>().enabled = true;
+        topCard.cardID = card.id;
+        if (!addToTop)
+            topCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
+        else
+            topCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(card.id));
     }
 
     public void RemoveCard(Card card)
     {
-        int index = pile.IndexOf(card);
-        if (index >= 0)
+        pile.Remove(card);
+        UpdateCount(-1);
+        if (_count > 0)
         {
-            pile.RemoveAt(index);
-            sprites.RemoveAt(index);
-        }
-        CountChange(-1);
-        if (_count == 0)
-            ChangeSprite(Resources.Load<Sprite>("invisible-png-4-png-image-invisible-png-300_240"));
-    }
-
-    public void SetAddToTop()
-    {
-        addToTop = true;
-    }
-
-    public bool AddToTop()
-    {
-        return addToTop;
-    }
-
-    public void ChangeSprite(Sprite sprite)
-    {
-        this.GetComponent<Image>().sprite = sprite;
-    }
-
-    public static Sprite LoadSprite(string filename)
-    {
-        if (System.IO.File.Exists(filename))
-        {
-            byte[] bytes = System.IO.File.ReadAllBytes(filename);
-            Texture2D texture = new Texture2D(1, 1);
-            texture.LoadImage(bytes);
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-            return sprite;
+            if (addToTop && pile.Count > 0)
+            {
+                topCard.cardID = pile[0].id;
+                topCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(topCard.cardID));
+            }
+            else
+            {
+                topCard.cardID = "";
+                topCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
+            }
         }
         else
-        {
-            Debug.Log(filename + "doesn't exist.");
-            return null;
-        }
+            topCard.GetComponent<Image>().enabled = false;
+    }
+
+    public void OnPointerEnter()
+    {
+        if (topCard.GetComponent<Image>().enabled)
+            topCard.GetComponent<CardBehavior>().DisplayCard();
     }
 }
