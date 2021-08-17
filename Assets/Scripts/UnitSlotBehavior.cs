@@ -213,4 +213,26 @@ public class UnitSlotBehavior : MonoBehaviour
         _upright = upright;
         inAnimation = false;
     }
+
+    public void RemoveFromSoul(Card card)
+    {
+        foreach (Card c in _soul)
+        {
+            if (c.tempID == card.tempID)
+            {
+                _soul.Remove(c);
+                return;
+            }
+        }
+    }
+
+    public bool ExistsInSoul(int tempID)
+    {
+        foreach (Card card in _soul)
+        {
+            if (tempID == card.tempID)
+                return true;
+        }
+        return false;
+    }
 }

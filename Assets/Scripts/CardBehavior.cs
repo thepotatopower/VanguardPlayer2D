@@ -24,6 +24,7 @@ public class CardBehavior : MonoBehaviour
     public int layer = 0;
     public bool selected = false;
     public bool selectable = false;
+    public bool inAnimation = false;
     public IEnumerator coroutine;
     Vector3 position, rotation, scale, originalPosition;
 
@@ -139,16 +140,63 @@ public class CardBehavior : MonoBehaviour
 
     public void MarkAsSelectable()
     {
-        if (this.transform.parent.name == "PlayerHand")
+        GameObject.Destroy(selectedCard);
+        selectedCard = GameObject.Instantiate(selectedCardPrefab);
+        Debug.Log("instantiated");
+        selectedCard.transform.position = this.transform.position;
+        selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
+        selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
+        selectedCard.transform.GetComponent<Image>().color = Color.cyan;
+        selectable = true;
+    }
+
+    public IEnumerator Flip()
+    {
+        inAnimation = true;
+        float step = 400 * Time.deltaTime;
+        Quaternion Ninety = Quaternion.Euler(this.transform.localRotation.eulerAngles.x, this.transform.localRotation.eulerAngles.y + 90, this.transform.localRotation.eulerAngles.z);
+        Quaternion Zero = Quaternion.Euler(this.transform.localRotation.eulerAngles.x, this.transform.localRotation.eulerAngles.y, this.transform.localRotation.eulerAngles.z);
+        Debug.Log("current: " + this.transform.localRotation.eulerAngles.ToString());
+        Debug.Log("ninety: " + Ninety.eulerAngles.ToString());
+        Debug.Log("zero: " + Zero.eulerAngles.ToString());
+        while (Quaternion.Angle(this.transform.localRotation, Ninety) > 0.01f)
         {
-            selectedCard = GameObject.Instantiate(selectedCardPrefab);
-            Debug.Log("instantiated");
-            selectedCard.transform.position = this.transform.position;
-            selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
-            selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
-            selectedCard.transform.GetComponent<Image>().color = Color.cyan;
-            selectable = true;
+            this.transform.localRotation = Quaternion.RotateTowards(this.transform.localRotation, Ninety, step);
+            yield return null;
         }
+        this.transform.localRotation = Ninety;
+        if (faceup)
+        {
+            faceup = false;
+            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../cardart/FaceDownCard.jpg");
+        }
+        else
+        {
+            faceup = true;
+            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(cardID));
+        }
+        while (Quaternion.Angle(this.transform.localRotation, Zero) > 0.01f)
+        {
+            this.transform.localRotation = Quaternion.RotateTowards(this.transform.localRotation, Zero, step);
+            yield return null;
+        }
+        this.transform.localRotation = Zero;
+        inAnimation = false;
+    }
+
+    public IEnumerator Flash(Color color)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            MarkAsSelectable();
+            selectedCard.GetComponent<Image>().color = color;
+            yield return new WaitForSecondsRealtime((float)0.10);
+            Reset();
+            yield return new WaitForSecondsRealtime((float)0.10);
+            Debug.Log("flashing");
+        }
+        Reset();
+        inAnimation = false;
     }
 
     public void Reset()

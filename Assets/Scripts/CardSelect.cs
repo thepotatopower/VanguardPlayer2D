@@ -89,14 +89,14 @@ public class CardSelect : MonoBehaviour
     public void ItemSelected(int tempID)
     {
         selected.Add(tempID);
-        if (selected.Count == minSelect)
+        if (selected.Count >= minSelect)
             SelectButton.interactable = true;
     }
 
     public void ItemDeselected(int tempID)
     {
         selected.Remove(tempID);
-        if (selected.Count < minSelect)
+        if (selected.Count < minSelect || selected.Count == 0)
             SelectButton.interactable = false;
     }
 

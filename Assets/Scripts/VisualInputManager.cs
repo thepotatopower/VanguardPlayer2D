@@ -81,6 +81,7 @@ public class VisualInputManager : NetworkBehaviour
     public SyncList<string> strings = new SyncList<string>();
     public SyncList<bool> faceup = new SyncList<bool>();
     public SyncList<bool> upright = new SyncList<bool>();
+    public SyncList<bool> bools = new SyncList<bool>();
     public bool receivedInput = false;
     public bool cardsAreSelectable = false;
     public bool cardsAreHoverable = true;
@@ -207,6 +208,9 @@ public class VisualInputManager : NetworkBehaviour
                         break;
                     case Location.RideDeck:
                         location = "<RideDeck>";
+                        break;
+                    case Location.Soul:
+                        location = "<Soul>";
                         break;
                 }
                 inputManager.strings.Add(location);
@@ -338,6 +342,51 @@ public class VisualInputManager : NetworkBehaviour
             }
             Thread.Sleep(250);
             inputManager.inputSignal = InputType.SelectActiveUnit;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
+        protected override void SelectAbility_Input()
+        {
+            Thread.Sleep(250);
+            string location;
+            inputManager.count = int_value;
+            inputManager.min = int_value2;
+            inputManager.query = _query;
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            inputManager.strings.Clear();
+            inputManager.bools.Clear();
+            intlist_input.Clear();
+            foreach (Ability ability in _abilities)
+            {
+                inputManager.tempIDs.Add(ability.GetCard().tempID);
+                inputManager.cardIDs.Add(ability.GetCard().id);
+                location = "<>";
+                //Debug.Log(_player1.GetLocation(card));
+                switch (_player1.GetLocation(ability.GetCard()))
+                {
+                    case Location.RC:
+                        location = "<RC>";
+                        break;
+                    case Location.VC:
+                        location = "<VC>";
+                        break;
+                    case Location.Hand:
+                        location = "<Hand>";
+                        break;
+                    case Location.RideDeck:
+                        location = "<RideDeck>";
+                        break;
+                }
+                inputManager.strings.Add(location);
+                inputManager.upright.Add(_player1.IsUpRight(ability.GetCard()));
+            }
+            if (!CheckForMandatoryEffects(_abilities))
+                inputManager.bool1 = true;
+            else
+                inputManager.bool1 = false;
+            inputManager.inputSignal = InputType.SelectAbility;
             WaitForReadyToContinue();
             oSignalEvent.Set();
         }
@@ -475,6 +524,10 @@ public class VisualInputManager : NetworkBehaviour
                     receivedInput = true;
                     StartCoroutine(SelectActiveUnit());
                     break;
+                case InputType.SelectAbility:
+                    receivedInput = true;
+                    StartCoroutine(SelectAbility());
+                    break;
             }
         }
         if (Input.GetMouseButtonDown(0))
@@ -533,6 +586,7 @@ public class VisualInputManager : NetworkBehaviour
         public const int SelectUnitToAttack = 14;
         public const int SelectGuardStepAction = 15;
         public const int SelectActiveUnit = 16;
+        public const int SelectAbility = 17;
     }
 
     public void ResetInputs()
@@ -540,6 +594,7 @@ public class VisualInputManager : NetworkBehaviour
         player1_input = -1;
         player2_input = -1;
         bool1 = false;
+        clicked = false;
         if (waitForButton != null)
         {
             waitForButton.Reset();
@@ -550,7 +605,7 @@ public class VisualInputManager : NetworkBehaviour
         cardSelect.Hide();
         cardSelect.ResetItems();
         cardsAreSelectable = false;
-        PlayerHand.GetComponent<PlayerHand>().Reset();
+        PlayerHand.GetComponent<Hand>().Reset();
         if (isServer)
         {
             Debug.Log("host resetting");
@@ -785,6 +840,51 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
+    IEnumerator SelectAbility()
+    {
+        Card card;
+        while (cardFightManager.InAnimation())
+        {
+            yield return null;
+        }
+        toggle.transform.localPosition = Globals.Instance.TogglePosition;
+        if (isActingPlayer())
+        {
+            cardSelect.Show();
+            if (bool1)
+                cardSelect.Initialize("Select ability to activate.", 1, 1);
+            else
+                cardSelect.Initialize("Select ability to activate.", 0, 1);
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                card = cardFightManager.LookUpCard(cardIDs[i]);
+                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, strings[i]);
+            }
+            int selection = -1;
+            waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
+            while (selection < 0)
+            {
+                if (waitForButton.PressedButton == cardSelect.SelectButton)
+                    selection = 0;
+                else if (waitForButton.PressedButton == cardSelect.CancelButton)
+                    selection = 1;
+                yield return null;
+            }
+            waitForButton.Reset();
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            if (selection == 0)
+                playerManager.CmdSingleInput(tempIDs.IndexOf(cardSelect.selected[0]));
+            else if (selection == 1)
+                playerManager.CmdSingleInput(tempIDs.Count);
+        }
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+        }
+    }
+
     IEnumerator SelectRidePhaseAction()
     {
         Debug.Log("selecting ride phase action");
@@ -798,7 +898,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             for (int i = 0; i < tempIDs.Count; i++)
             {
-                PlayerHand.GetComponent<PlayerHand>().MarkAsSelectable(tempIDs[i]);
+                PlayerHand.GetComponent<Hand>().MarkAsSelectable(tempIDs[i]);
             }
             int selection = -1;
             int selection2 = -1;
@@ -846,7 +946,8 @@ public class VisualInputManager : NetworkBehaviour
         {
             for (int i = 0; i < tempIDs.Count; i++)
             {
-                PlayerHand.GetComponent<PlayerHand>().MarkAsSelectable(tempIDs[i]);
+                PlayerHand.GetComponent<Hand>().MarkAsSelectable(tempIDs[i]);
+                PlayerHand.GetComponent<Hand>().MarkAsSelectable(tempIDs[i]);
             }
             int selection = -1;
             int selection2 = -1;
@@ -1266,17 +1367,17 @@ public class VisualInputManager : NetworkBehaviour
 
     public void OnUnitClicked(int unitSlot, GameObject unit, bool selected)
     {
+        if (inputSignal == InputType.SelectCallLocation)
+        {
+            selectedUnit = unitSlot;
+            clicked = true;
+        }
         if (cardFightManager != null && !cardFightManager.InAnimation() && unit != null)
         {
             Buttons.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
         }
         else
             return;
-        if (inputSignal == InputType.SelectCallLocation)
-        {
-            selectedUnit = unitSlot;
-            clicked = true;
-        }
         if (inputSignal == InputType.SelectMainPhaseAction)
         {
             if (unit != null)
@@ -1352,7 +1453,6 @@ public class VisualInputManager : NetworkBehaviour
 
     public void ResetPositions()
     {
-        clicked = false;
         browsingField = false;
         selectedGameObject = null;
         rockButton.transform.position = new Vector3(10000, 0, 0);

@@ -67,14 +67,14 @@ public class UnitSelectArea : MonoBehaviour
         }
     }
 
-    public IEnumerator Flash()
+    public IEnumerator Flash(Color color)
     {
         if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
         {
             for (int i = 0; i < 6; i++)
             {
                 unitSlot.GetComponent<Image>().enabled = true;
-                unitSlot.GetComponent<Image>().color = Color.white;
+                unitSlot.GetComponent<Image>().color = color;
                 yield return new WaitForSecondsRealtime((float)0.10);
                 unitSlot.GetComponent<Image>().enabled = false;
                 yield return new WaitForSecondsRealtime((float)0.10);

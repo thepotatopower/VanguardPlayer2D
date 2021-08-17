@@ -81,7 +81,7 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../testDeck.txt", LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 1);
         }
         else
         {
@@ -149,6 +149,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight.OnRidePhase += PerformRidePhase;
         cardFight.OnMainPhase += PerformMainPhase;
         cardFight.OnBattlePhase += PerformBattlePhase;
+        cardFight.OnAbilityActivated += ShowAbilityActivated;
         cardFight._player1.OnAttack += PerformAttack;
         cardFight._player2.OnAttack += PerformAttack;
         cardFight._player1.OnShieldValueChanged += ChangeShieldValue;
@@ -250,7 +251,7 @@ public class CardFightManager : NetworkBehaviour
     {
         Debug.Log("changing zone");
         inAnimation = true;
-        PlayerHand.GetComponent<PlayerHand>().Reset();
+        PlayerHand.GetComponent<Hand>().Reset();
         GameObject previousZone = null;
         GameObject currentZone = null;
         GameObject zone = null;
@@ -393,7 +394,7 @@ public class CardFightManager : NetworkBehaviour
         if (previousLocation == Location.Soul)
         {
             Debug.Log("removing from soul");
-            Globals.Instance.unitSlots.GetUnitSlot(previousFL).GetComponent<UnitSlotBehavior>()._soul.Remove(card);
+            Globals.Instance.unitSlots.GetUnitSlot(previousFL).GetComponent<UnitSlotBehavior>().RemoveFromSoul(card);
         }
         if (currentLocation == Location.Soul)
         {
@@ -432,22 +433,17 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("done zooming in");
         }
 
-        if (previousZone == PlayerHand)
+        if (previousZone == PlayerHand || previousZone == EnemyHand)
         {
-            for (int i = 0; i < PlayerHand.transform.childCount; i++)
+            for (int i = 0; i < previousZone.transform.childCount; i++)
             {
-                newCard = PlayerHand.transform.GetChild(i).gameObject;
+                newCard = previousZone.transform.GetChild(i).gameObject;
                 if (int.Parse(newCard.name) == card.tempID)
                 {
                     //GameObject.Destroy(newCard.GetComponent<CardBehavior>().selectedCard);
                     break;
                 }
             }
-        }
-        else if (previousZone == EnemyHand)
-        {
-            newCard = EnemyHand.transform.GetChild(EnemyHand.transform.childCount - 1).gameObject;
-            newCard.transform.SetParent(Field.transform);
         }
         else if (previousZone == Globals.Instance.guardianCircle)
         {
@@ -486,6 +482,11 @@ public class CardFightManager : NetworkBehaviour
             //newCard.transform.localScale = Field.transform.localScale;
         }
         newCard.name = card.tempID.ToString();
+        newCard.GetComponent<CardBehavior>().Reset();
+        if (faceup)
+            newCard.GetComponent<CardBehavior>().faceup = true;
+        else
+            newCard.GetComponent<CardBehavior>().faceup = false;
 
         if (currentZone.name.Contains("Trigger"))
         {
@@ -493,16 +494,18 @@ public class CardFightManager : NetworkBehaviour
             newCard.transform.localScale = newCard.transform.localScale * (float)(8 / 1.2);
         }
 
-        
+
         if (currentZone == EnemyDeckZone || currentZone == EnemyHand)
+        {
             newCard.GetComponent<Image>().sprite = LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
+        }
         else if (currentZone.GetComponent<UnitSlotBehavior>() != null)
         {
             newCard.GetComponent<CardBehavior>().faceup = true;
             newCard.GetComponent<Image>().sprite = LoadSprite(FixFileName(card.id));
             newCard.GetComponent<CardBehavior>().card = LookUpCard(card.id);
         }
-        else 
+        else
             newCard.GetComponent<Image>().sprite = LoadSprite(FixFileName(card.id));
 
         Debug.Log(currentZone.name);
@@ -534,6 +537,7 @@ public class CardFightManager : NetworkBehaviour
             newCard.transform.position = Vector3.MoveTowards(newCard.transform.position, blankCard.transform.position, step);
             yield return null;
         }
+        blankCard.transform.SetParent(null);
         GameObject.Destroy(blankCard);
 
         if (currentZone == Globals.Instance.playerTriggerZone || currentZone == Globals.Instance.enemyTriggerZone)
@@ -550,8 +554,17 @@ public class CardFightManager : NetworkBehaviour
 
 
         if (currentZone.name.Contains("Hand") || currentZone.name.Contains("Trigger"))
+        {
             newCard.transform.SetParent(currentZone.transform);
-        else if (currentZone.GetComponent<UnitSlotBehavior>() != null)
+            if (currentZone.name == "EnemyHand")
+            {
+                Debug.Log("shuffling hand");
+                StartCoroutine(currentZone.GetComponent<Hand>().Shuffle());
+                while (currentZone.GetComponent<Hand>().inAnimation)
+                    yield return null;
+            }
+        }
+        else if (currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul)
         {
             currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.grade, critical, card.power, card.power, true, true, card.id, newCard);
         }
@@ -622,6 +635,113 @@ public class CardFightManager : NetworkBehaviour
             yield return null;
         UnitSlots.GetComponent<UnitSlots>().Show(previousFL);
         UnitSlots.GetComponent<UnitSlots>().Show(currentFL);
+        inAnimation = false;
+    }
+
+    public void ShowAbilityActivated(object sender, CardEventArgs e)
+    {
+        RpcShowAbilityActivated(e.card);
+    }
+
+    [ClientRpc]
+    public void RpcShowAbilityActivated(Card card)
+    {
+        animations.Add(ShowAbilityActivatedRoutine(card));
+    }
+
+    IEnumerator ShowAbilityActivatedRoutine(Card card)
+    {
+        GameObject target = GameObject.Find(card.tempID.ToString());
+        bool abilityBoxAnimation = true;
+        bool sliding = false;
+        IEnumerator SlideAbilityBox()
+        {
+            GameObject abilityBox = Globals.Instance.AbilityBox;
+            abilityBox.GetComponentInChildren<Text>().text = card.name + "'s ability activates!";
+            abilityBox.transform.localPosition = Globals.Instance.AbilityBoxResetPosition;
+            float step = 600 * Time.deltaTime;
+            while (Vector3.Distance(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition) > 0.001f)
+            {
+                abilityBox.transform.localPosition = Vector3.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition, step);
+                yield return null;
+            }
+            yield return new WaitForSecondsRealtime(1);
+            while (Vector3.Distance(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxResetPosition) > 0.001f)
+            {
+                abilityBox.transform.localPosition = Vector3.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxResetPosition, step);
+                yield return null;
+            }
+            abilityBoxAnimation = false;
+        }
+        StartCoroutine(SlideAbilityBox());
+        if (target != null)
+        {
+            if (target.GetComponentInParent<UnitSlotBehavior>() != null)
+            {
+                StartCoroutine(target.transform.parent.GetComponentInChildren<UnitSelectArea>().Flash(Color.yellow));
+                target.transform.parent.GetComponentInChildren<UnitSelectArea>().inAnimation = true;
+                while (target.transform.parent.GetComponentInChildren<UnitSelectArea>().inAnimation)
+                    yield return null;
+            }
+            else if (target.GetComponentInParent<Hand>() != null)
+            {
+                if (target.transform.parent.name == "EnemyHand" && !target.GetComponent<CardBehavior>().faceup)
+                {
+                    target.GetComponent<CardBehavior>().cardID = card.id;
+                    target.GetComponent<CardBehavior>().inAnimation = true;
+                    StartCoroutine(target.GetComponent<CardBehavior>().Flip());
+                    while (target.GetComponent<CardBehavior>().inAnimation)
+                        yield return null;
+                }
+                target.GetComponent<CardBehavior>().inAnimation = true;
+                StartCoroutine(target.GetComponent<CardBehavior>().Flash(Color.yellow));
+                while (target.GetComponent<CardBehavior>().inAnimation)
+                    yield return null;
+                if (target.transform.parent.name == "EnemyHand" && target.GetComponent<CardBehavior>().faceup)
+                {
+                    target.GetComponent<CardBehavior>().inAnimation = true;
+                    StartCoroutine(target.GetComponent<CardBehavior>().Flip());
+                    while (target.GetComponent<CardBehavior>().inAnimation)
+                        yield return null;
+                }
+            }
+        }
+        else if (Globals.Instance.unitSlots.GetUnitSlotWithSoul(card.tempID) != null)
+        {
+            IEnumerator SlideOutFromSoul()
+            {
+                GameObject unit = Globals.Instance.unitSlots.GetUnitSlotWithSoul(card.tempID);
+                GameObject newCard = CreateNewCard(card.id, -1);
+                newCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
+                newCard.transform.SetSiblingIndex(unit.transform.GetSiblingIndex() - 1);
+                newCard.transform.localPosition = unit.transform.localPosition;
+                float step = 600 * Time.deltaTime;
+                Vector3 slidePosition = new Vector3(newCard.transform.localPosition.x + 75, newCard.transform.localPosition.y, 0);
+                while (Vector3.Distance(newCard.transform.localPosition, slidePosition) > 0.001f)
+                {
+                    newCard.transform.localPosition = Vector3.MoveTowards(newCard.transform.localPosition, slidePosition, step);
+                    yield return null;
+                }
+                newCard.GetComponent<CardBehavior>().inAnimation = true;
+                StartCoroutine(newCard.GetComponent<CardBehavior>().Flash(Color.yellow));
+                while (newCard.GetComponent<CardBehavior>().inAnimation)
+                    yield return null;
+                slidePosition = new Vector3(newCard.transform.localPosition.x - 75, newCard.transform.localPosition.y, 0);
+                while (Vector3.Distance(newCard.transform.localPosition, slidePosition) > 0.001f)
+                {
+                    newCard.transform.localPosition = Vector3.MoveTowards(newCard.transform.localPosition, slidePosition, step);
+                    yield return null;
+                }
+                GameObject.Destroy(newCard);
+                sliding = false;
+            }
+            sliding = true;
+            StartCoroutine(SlideOutFromSoul());
+            while (sliding)
+                yield return null;
+        }
+        while (abilityBoxAnimation)
+            yield return null;
         inAnimation = false;
     }
 
@@ -744,7 +864,7 @@ public class CardFightManager : NetworkBehaviour
         {
             unit = UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponentInChildren<UnitSelectArea>();
             unit.inAnimation = true;
-            StartCoroutine(unit.Flash());
+            StartCoroutine(unit.Flash(Color.white));
             while (unit.inAnimation)
                 yield return null;
             inAnimation = false;

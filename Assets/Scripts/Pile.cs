@@ -84,4 +84,14 @@ public class Pile : NetworkBehaviour
         if (topCard.GetComponent<Image>().enabled)
             topCard.GetComponent<CardBehavior>().DisplayCard();
     }
+
+    public bool ContainsCard(int tempID)
+    {
+        foreach (Card card in pile)
+        {
+            if (card.tempID == tempID)
+                return true;
+        }
+        return false;
+    }
 }
