@@ -22,6 +22,7 @@ public class DamageZone : MonoBehaviour
     {
         card.transform.rotation = Quaternion.Euler(0, 0, 0);
         card.transform.SetParent(this.transform);
+        card.GetComponent<CardBehavior>().faceup = true;
         if (player)
             card.transform.Rotate(new Vector3(0, 0, 90));
         else

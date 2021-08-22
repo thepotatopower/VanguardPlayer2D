@@ -81,13 +81,13 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd02.txt", LoadCode.WithRideDeck), 1);
         }
         else
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd02.txt", LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -137,13 +137,15 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log("player2 count: " + player2_generatedDeck.Count);
         inputManager.InitializeInputManager();
         cardFight = new VanguardEngine.CardFight();
-        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, Application.dataPath + "/../lua");
+        string luaPath = Application.dataPath + "/../lua";
+        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath);
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
         cardFight._player1.OnZoneChanged += ChangeZone;
         cardFight._player1.OnZoneSwapped += SwapZone;
         cardFight._player1.OnUpRightChanged += ChangeUpRight;
+        cardFight._player1.OnFaceUpChanged += ChangeFaceUp;
         cardFight.OnDrawPhase += PerformDrawPhase;
         cardFight.OnStandPhase += PerformStandPhase;
         cardFight.OnRidePhase += PerformRidePhase;
@@ -224,7 +226,7 @@ public class CardFightManager : NetworkBehaviour
         Card card;
         if (e.currentLocation.Item2 > 0)
         {
-            card = cardFight._player1.GetUnitAt(e.currentLocation.Item2);
+            card = cardFight._player1.GetUnitAt(e.currentLocation.Item2, false);
             if (card != null)
             {
                 grade = card.grade;
@@ -370,15 +372,20 @@ public class CardFightManager : NetworkBehaviour
                 Debug.Log("soul here");
                 zone = Globals.Instance.unitSlots.GetUnitSlot(FL);
             }
+            else if (location == Location.OrderArea)
+            {
+                Debug.Log("order area here");
+                zone = Globals.Instance.orderArea;
+            }
             else if (location == -1)
             {
                 Debug.Log("other location here");
-                GameObject removed = GameObject.Find(card.tempID.ToString());
-                if (removed != null)
-                {
-                    removed.transform.SetParent(null);
-                    GameObject.Destroy(removed);
-                }
+                //GameObject removed = GameObject.Find(card.tempID.ToString());
+                //if (removed != null)
+                //{
+                //    removed.transform.SetParent(null);
+                //    GameObject.Destroy(removed);
+                //}
             }
             else
             {
@@ -445,8 +452,9 @@ public class CardFightManager : NetworkBehaviour
                 }
             }
         }
-        else if (previousZone == Globals.Instance.guardianCircle)
+        else if (previousZone == Globals.Instance.guardianCircle.gameObject)
         {
+            Debug.Log("removing from gc");
             newCard = Globals.Instance.guardianCircle.RemoveCard(card.tempID);
         }
         else if (previousZone.GetComponent<DamageZone>() != null)
@@ -470,6 +478,11 @@ public class CardFightManager : NetworkBehaviour
             newCard.transform.localPosition = previousZone.transform.localPosition;
             if (previousZone.name.Contains("Enemy"))
                 newCard.transform.Rotate(0, 0, 180);
+        }
+        else if (previousZone.name == "OrderArea")
+        {
+            newCard = Globals.Instance.orderArea.transform.GetChild(0).gameObject;
+            newCard.transform.SetParent(GameObject.Find("Field").transform);
         }
         else
         {
@@ -572,6 +585,8 @@ public class CardFightManager : NetworkBehaviour
             currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
         else if (currentZone.GetComponent<DamageZone>() != null)
             currentZone.GetComponent<DamageZone>().AddCard(newCard, card.tempID);
+        else if (currentZone.name == "OrderArea")
+            newCard.transform.SetParent(currentZone.transform);
         else
         {
             newCard.transform.SetParent(null);
@@ -791,6 +806,10 @@ public class CardFightManager : NetworkBehaviour
     public void PerformRidePhase(object sender, CardEventArgs e)
     {
         Debug.Log("ride phase");
+        if (isPlayerAction(cardFight.actingPlayer._playerID))
+            Debug.Log("my turn");
+        else
+            Debug.Log("their turn");
         RpcChangePhase(Phase.Ride, cardFight.actingPlayer._playerID, cardFight._turn);
     }
 
@@ -895,6 +914,38 @@ public class CardFightManager : NetworkBehaviour
             while (unit.inAnimation)
                 yield return null;
         }
+        inAnimation = false;
+    }
+
+    public void ChangeFaceUp(object sender, CardEventArgs e)
+    {
+        Debug.Log("flipping");
+        Player player = sender as Player;
+        RpcChangeFaceUp(e.i, e.faceup);
+    }
+
+    [ClientRpc]
+    public void RpcChangeFaceUp(int tempID, bool faceup)
+    {
+        animations.Add(Flip(tempID, faceup));
+    }
+
+    IEnumerator Flip(int tempID, bool faceup)
+    {
+        CardBehavior card = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
+        //if (card.faceup != faceup)
+        //{
+        //    card.inAnimation = true;
+        //    StartCoroutine(card.Flip());
+        //    while (card.inAnimation)
+        //        yield return null;
+        //}
+        card.inAnimation = true;
+        StartCoroutine(card.Flip());
+        while (card.inAnimation)
+            yield return null;
+        if (card.transform.parent.GetComponent<UnitSlotBehavior>() != null)
+            card.transform.parent.GetComponent<UnitSlotBehavior>()._faceup = faceup;
         inAnimation = false;
     }
 

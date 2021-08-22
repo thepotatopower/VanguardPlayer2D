@@ -33,7 +33,7 @@ public class POWSLD : MonoBehaviour
                 }
                 else
                     this.transform.localPosition = Globals.Instance.ResetPosition;
-                if (Globals.Instance.cardFightManager._booster > 0)
+                if (Globals.Instance.cardFightManager._booster > 0 && !compare)
                     _count += Globals.Instance.unitSlots.GetUnitSlot(Globals.Instance.cardFightManager._booster).GetComponent<UnitSlotBehavior>()._power;
             }
             else
@@ -60,6 +60,8 @@ public class POWSLD : MonoBehaviour
                 _text.color = Color.red;
                 //Debug.Log("lower");
             }
+            else
+                _text.color = Color.cyan;
         }
         else
             _text.color = Color.cyan;

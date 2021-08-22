@@ -124,18 +124,18 @@ public class CardBehavior : MonoBehaviour
         }
         Vector3 newPosition = new Vector3(this.transform.position.x, direction, 0);
         float step = 150 * Time.deltaTime;
-        while (Vector3.Distance(this.transform.position, newPosition) > 0.001f)
+        while (Vector3.Distance(this.transform.position, new Vector3(this.transform.position.x, direction, this.transform.position.z)) > 0.001f)
         {
             oldPosition = this.transform.position;
-            this.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
+            this.transform.position = Vector2.MoveTowards(this.transform.position, new Vector2(this.transform.position.x, direction), step);
             if (selectedCard != null)
-                selectedCard.transform.position = Vector3.MoveTowards(this.transform.position, newPosition, step);
+                selectedCard.transform.position = Vector2.MoveTowards(this.transform.position, new Vector2(this.transform.position.x, direction), step);
             if (oldPosition == this.transform.position)
                 break;
             //Debug.Log("hovering");
             yield return null;
         }
-        this.transform.position = newPosition;
+        this.transform.position = new Vector2(this.transform.position.x, direction);
     }
 
     public void MarkAsSelectable()
@@ -152,9 +152,14 @@ public class CardBehavior : MonoBehaviour
 
     public IEnumerator Flip()
     {
+        Debug.Log("cardbehavior is flipping");
         inAnimation = true;
         float step = 400 * Time.deltaTime;
-        Quaternion Ninety = Quaternion.Euler(this.transform.localRotation.eulerAngles.x, this.transform.localRotation.eulerAngles.y + 90, this.transform.localRotation.eulerAngles.z);
+        Quaternion Ninety;
+        if (this.transform.parent.gameObject.GetComponent<DamageZone>() != null)
+            Ninety = Quaternion.Euler(this.transform.localRotation.eulerAngles.x + 90, this.transform.localRotation.eulerAngles.y, this.transform.localRotation.eulerAngles.z);
+        else
+            Ninety = Quaternion.Euler(this.transform.localRotation.eulerAngles.x, this.transform.localRotation.eulerAngles.y + 90, this.transform.localRotation.eulerAngles.z);
         Quaternion Zero = Quaternion.Euler(this.transform.localRotation.eulerAngles.x, this.transform.localRotation.eulerAngles.y, this.transform.localRotation.eulerAngles.z);
         Debug.Log("current: " + this.transform.localRotation.eulerAngles.ToString());
         Debug.Log("ninety: " + Ninety.eulerAngles.ToString());
@@ -168,7 +173,7 @@ public class CardBehavior : MonoBehaviour
         if (faceup)
         {
             faceup = false;
-            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite("../cardart/FaceDownCard.jpg");
+            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
         }
         else
         {

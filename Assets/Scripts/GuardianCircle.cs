@@ -36,6 +36,7 @@ public class GuardianCircle : MonoBehaviour
                 returnedCard = this.transform.GetChild(i).gameObject;
                 returnedCard.transform.SetParent(GameObject.Find("Field").transform);
                 returnedCard.transform.localPosition = this.transform.localPosition;
+                Debug.Log("gc found card");
                 return returnedCard;
             }
         }

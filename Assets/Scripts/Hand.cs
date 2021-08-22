@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 public class Hand : MonoBehaviour
 {
@@ -62,5 +63,15 @@ public class Hand : MonoBehaviour
             originalOrder[i].transform.SetSiblingIndex(newOrder[i]);
         }
         inAnimation = false;
+    }
+
+    public bool IsInHand(int tempID)
+    {
+        for (int i = 0; i < hand.transform.childCount; i++)
+        {
+            if (Int32.Parse(hand.transform.GetChild(i).name) == tempID)
+                return true;
+        }
+        return false;
     }
 }

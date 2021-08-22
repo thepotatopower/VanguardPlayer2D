@@ -197,6 +197,16 @@ public class UnitSlots : MonoBehaviour
         return false;
     }
 
+    public bool IsUnit(int tempID)
+    {
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null && _unitSlots[i].GetComponent<UnitSlotBehavior>().unit != null && Int32.Parse(_unitSlots[i].GetComponent<UnitSlotBehavior>().unit.name) == tempID)
+                return true;
+        }
+        return false;
+    }
+
     public GameObject GetUnitSlotWithSoul(int tempID)
     {
         for (int i = 0; i < _unitSlots.Length; i++)
