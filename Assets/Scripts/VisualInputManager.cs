@@ -331,6 +331,13 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.bool1 = true;
             else
                 inputManager.bool1 = false;
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            foreach (Card card in _player1.GetInterceptableCards())
+            {
+                inputManager.cardIDs.Add(card.id);
+                inputManager.tempIDs.Add(card.tempID);
+            }
             Thread.Sleep(250);
             inputManager.inputSignal = InputType.SelectGuardStepAction;
             WaitForReadyToContinue();
@@ -1166,6 +1173,10 @@ public class VisualInputManager : NetworkBehaviour
         toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
+            for (int i = 0; i < tempIDs.Count; i++)
+            {
+                UnitSlots.GetComponent<UnitSlots>().MarkAsSelectable(tempIDs[i]);
+            }
             toggle.transform.localPosition = new Vector3(0, -300, 0);
             Button selectionButton1 = GameObject.Find("SelectionButton1").GetComponent<Button>();
             Button selectionButton2 = GameObject.Find("SelectionButton2").GetComponent<Button>();
@@ -1177,13 +1188,18 @@ public class VisualInputManager : NetworkBehaviour
             selectionButton2.GetComponentInChildren<Text>().text = "End Guard";
             if (!bool1)
                 selectionButton1.interactable = false;
-            waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2);
+            waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2, cardButton);
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == selectionButton1)
                     selection = GuardStepAction.Guard;
                 else if (waitForButton.PressedButton == selectionButton2)
                     selection = GuardStepAction.End;
+                else if (waitForButton.PressedButton == cardButton && cardButton.GetComponentInChildren<Text>().text == "Intercept")
+                {
+                    selection = GuardStepAction.Intercept;
+                    selection2 = selectedCard;
+                }
                 yield return null;
             }
             waitForButton.Reset();
@@ -1312,7 +1328,8 @@ public class VisualInputManager : NetworkBehaviour
             if (drop.GetComponent<Pile>().pile.Count == 0)
                 return;
             Buttons.transform.position = drop.transform.position;
-            viewButton.transform.SetParent(Buttons.transform);
+            
+            Button.transform.SetParent(Buttons.transform);
             selectedGameObject = drop;
         }
     }
@@ -1375,8 +1392,6 @@ public class VisualInputManager : NetworkBehaviour
 
     public void OnCardClicked(GameObject card)
     {
-        if (!isActingPlayer())
-            return;
         if (cardFightManager != null && !cardFightManager.InAnimation())
         {
             Buttons.transform.position = new Vector3(card.transform.position.x, card.transform.position.y + 100, 0);
@@ -1408,62 +1423,75 @@ public class VisualInputManager : NetworkBehaviour
 
     public void OnUnitClicked(int unitSlot, GameObject unit, bool selected)
     {
-        if (!isActingPlayer())
-            return;
-        if (inputSignal == InputType.SelectCallLocation)
+        if (isActingPlayer())
         {
-            selectedUnit = unitSlot;
-            clicked = true;
-        }
-        if (cardFightManager != null && !cardFightManager.InAnimation() && unit != null)
-        {
-            Buttons.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
-        }
-        else
-            return;
-        if (inputSignal == InputType.SelectMainPhaseAction)
-        {
-            if (unit != null)
+            if (inputSignal == InputType.SelectCallLocation)
             {
-                cardButton.transform.GetComponentInChildren<Text>().text = "Move";
-                cardButton.transform.SetParent(Buttons.transform);
-                Debug.Log(unit.name);
-                selectedCard = Int32.Parse(unit.name);
                 selectedUnit = unitSlot;
-                if (selected)
+                clicked = true;
+            }
+            if (cardFightManager != null && !cardFightManager.InAnimation() && unit != null)
+            {
+                Buttons.transform.position = new Vector3(unit.transform.position.x, unit.transform.position.y + 50, 0);
+            }
+            else
+                return;
+            if (inputSignal == InputType.SelectMainPhaseAction)
+            {
+                if (unit != null)
                 {
-                    cardButton2.transform.GetComponentInChildren<Text>().text = "Activate";
-                    cardButton2.transform.SetParent(Buttons.transform);
-                    Debug.Log(unit.name + " selected for ACT");
+                    cardButton.transform.GetComponentInChildren<Text>().text = "Move";
+                    cardButton.transform.SetParent(Buttons.transform);
+                    Debug.Log(unit.name);
+                    selectedCard = Int32.Parse(unit.name);
+                    selectedUnit = unitSlot;
+                    if (selected)
+                    {
+                        cardButton2.transform.GetComponentInChildren<Text>().text = "Activate";
+                        cardButton2.transform.SetParent(Buttons.transform);
+                        Debug.Log(unit.name + " selected for ACT");
+                    }
+                }
+            }
+            if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
+            {
+                if (unit != null && selected)
+                {
+                    cardButton.transform.GetComponentInChildren<Text>().text = "Attack";
+                    cardButton.transform.SetParent(Buttons.transform);
+                    Debug.Log(unit.name);
+                    selectedCard = Int32.Parse(unit.name);
+                    selectedUnit = unitSlot;
+                }
+            }
+            if (inputSignal == InputType.SelectActiveUnit)
+            {
+                if (unit != null && selected)
+                {
+                    cardButton.transform.GetComponentInChildren<Text>().text = "Select";
+                    cardButton.transform.SetParent(Buttons.transform);
+                    Debug.Log(unit.name);
+                    selectedCard = Int32.Parse(unit.name);
+                    selectedUnit = unitSlot;
+                }
+            }
+            if (inputSignal == InputType.SelectGuardStepAction)
+            {
+                if (unit != null && selected)
+                {
+                    cardButton.transform.GetComponentInChildren<Text>().text = "Intercept";
+                    cardButton.transform.SetParent(Buttons.transform);
+                    Debug.Log(unit.name);
+                    selectedCard = Int32.Parse(unit.name);
+                    selectedUnit = unitSlot;
                 }
             }
         }
-        if (inputSignal == InputType.SelectBattlePhaseAction || inputSignal == InputType.SelectUnitToAttack)
-        {
-            if (unit != null && selected)
-            {
-                cardButton.transform.GetComponentInChildren<Text>().text = "Attack";
-                cardButton.transform.SetParent(Buttons.transform);
-                Debug.Log(unit.name);
-                selectedCard = Int32.Parse(unit.name);
-                selectedUnit = unitSlot;
-            }
-        }
-        if (inputSignal == InputType.SelectActiveUnit)
-        {
-            if (unit != null && selected)
-            {
-                cardButton.transform.GetComponentInChildren<Text>().text = "Select";
-                cardButton.transform.SetParent(Buttons.transform);
-                Debug.Log(unit.name);
-                selectedCard = Int32.Parse(unit.name);
-                selectedUnit = unitSlot;
-            }
-        }
-        if (browsingField && Globals.Instance.unitSlots.GetUnitSlot(unitSlot).GetComponent<UnitSlotBehavior>()._soul.Count > 0)
+        if (Globals.Instance.unitSlots.GetUnitSlot(unitSlot).GetComponent<UnitSlotBehavior>()._soul.Count > 0)
         {
             viewButton.transform.SetParent(Buttons.transform);
             selectedGameObject = Globals.Instance.unitSlots.GetUnitSlot(unitSlot);
+            Buttons.transform.position = selectedGameObject.transform.position;
         }
     }
 

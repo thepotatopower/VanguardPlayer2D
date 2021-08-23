@@ -138,7 +138,8 @@ public class CardFightManager : NetworkBehaviour
         inputManager.InitializeInputManager();
         cardFight = new VanguardEngine.CardFight();
         string luaPath = Application.dataPath + "/../lua";
-        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath);
+        //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
+        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
@@ -260,6 +261,7 @@ public class CardFightManager : NetworkBehaviour
         GameObject newCard = null;
         int location = previousLocation;
         int FL = previousFL;
+        Debug.Log("previous location: " + previousLocation + " current location: " + currentLocation);
         for (int i = 0; i < 2; i++)
         {
             if (i == 1)
@@ -267,7 +269,6 @@ public class CardFightManager : NetworkBehaviour
                 location = currentLocation;
                 FL = currentFL;
             }
-            Debug.Log(location);
             if (location == Location.Deck)
             {
                 if (isServer)
@@ -380,6 +381,7 @@ public class CardFightManager : NetworkBehaviour
             else if (location == -1)
             {
                 Debug.Log("other location here");
+                zone = null;
                 //GameObject removed = GameObject.Find(card.tempID.ToString());
                 //if (removed != null)
                 //{
@@ -424,6 +426,13 @@ public class CardFightManager : NetworkBehaviour
         if (currentZone == null || previousZone == null || (currentFL >= 0 && previousFL >= 0 && currentFL == previousFL))
         {
             inAnimation = false;
+            Debug.Log("destroying object");
+            GameObject remove = GameObject.Find(card.tempID.ToString());
+            if (remove != null)
+            {
+                remove.transform.SetParent(null);
+                GameObject.Destroy(remove);
+            }
             yield break;
         }
 
