@@ -153,6 +153,15 @@ public class UnitSlots : MonoBehaviour
         }
     }
 
+    public void Reset(int tempID)
+    {
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null && _unitSlots[i].GetComponent<UnitSlotBehavior>().IsUnit(tempID))
+                _unitSlots[i].GetComponentInChildren<UnitSelectArea>().Reset();
+        }
+    }
+
     public void PerformAttack(int attackingCircle, int attackedCircle)
     {
         Debug.Log("performing attack. attackingCircle: " + attackingCircle + ", attackedCircle: " + attackedCircle);

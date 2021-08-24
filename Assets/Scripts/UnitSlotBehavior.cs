@@ -42,6 +42,10 @@ public class UnitSlotBehavior : MonoBehaviour
                 Power.color = Color.red;
             else
                 Power.color = Color.white;
+            if (_power >= 100000000)
+                Power.fontSize = 40;
+            else
+                Power.fontSize = 66;
             Critical.text = "C:" + _critical.ToString();
             if (_critical < 1)
                 Critical.color = Color.red;
@@ -233,6 +237,13 @@ public class UnitSlotBehavior : MonoBehaviour
             if (tempID == card.tempID)
                 return true;
         }
+        return false;
+    }
+
+    public bool IsUnit(int tempID)
+    {
+        if (unit != null && Int32.Parse(unit.name) == tempID)
+            return true;
         return false;
     }
 }

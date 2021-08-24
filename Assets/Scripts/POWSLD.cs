@@ -81,7 +81,12 @@ public class POWSLD : MonoBehaviour
             ot = (int)(value / 100000000) * 100000000;
             baseValue -= ot;
         }
-        if (ot == 0)
+        if (value >= 1000000000)
+        {
+            _text.fontSize = 55;
+            _text.text = "Sentinel";
+        }
+        else if (ot == 0)
         {
             _text.fontSize = 55;
             _text.text = baseValue.ToString();

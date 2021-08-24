@@ -41,6 +41,7 @@ public class CardSelectItemBehavior : MonoBehaviour
             this.GetComponent<Image>().color = new Color32(195, 243, 250, 0);
             selected = false;
             cardSelect.ItemDeselected(tempID);
+            Globals.Instance.unitSlots.Reset(tempID);
         }
         else
         {
@@ -49,6 +50,7 @@ public class CardSelectItemBehavior : MonoBehaviour
                 this.GetComponent<Image>().color = new Color32(92, 233, 255, 255);
                 selected = true;
                 cardSelect.ItemSelected(tempID);
+                Globals.Instance.unitSlots.MarkAsSelectable(tempID);
             }
         }
     }

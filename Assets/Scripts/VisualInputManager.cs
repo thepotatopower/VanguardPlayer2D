@@ -841,7 +841,7 @@ public class VisualInputManager : NetworkBehaviour
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, faceup[i], upright[i], strings[i]);
+                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], strings[i]);
             }
             int selection = -1;
             waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
@@ -1329,7 +1329,7 @@ public class VisualInputManager : NetworkBehaviour
                 return;
             Buttons.transform.position = drop.transform.position;
             
-            Button.transform.SetParent(Buttons.transform);
+            Buttons.transform.SetParent(Buttons.transform);
             selectedGameObject = drop;
         }
     }
@@ -1506,6 +1506,7 @@ public class VisualInputManager : NetworkBehaviour
             Globals.Instance.selectionButton1.transform.position = currentSelectionButton1Position;
             Globals.Instance.selectionButton2.transform.position = currentSelectionButton2Position;
             browsingField = false;
+            toggle.GetComponentInChildren<Text>().text = "Hide Prompt";
         }
         else
         {
@@ -1525,6 +1526,7 @@ public class VisualInputManager : NetworkBehaviour
             selectedGameObject = null;
             OnCardViewerCancelClicked();
             browsingField = true;
+            toggle.GetComponentInChildren<Text>().text = "Show Prompt";
         }
     }
 

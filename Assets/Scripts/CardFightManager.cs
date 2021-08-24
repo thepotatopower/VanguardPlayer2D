@@ -81,13 +81,13 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd02.txt", LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd03.txt", LoadCode.WithRideDeck), 1);
         }
         else
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd01.txt", LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd03.txt", LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -159,6 +159,8 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnCardValueChanged += ChangeCardValue;
         cardFight._player1.OnAttackHits += CheckIfAttackHits;
         cardFight._player2.OnAttackHits += CheckIfAttackHits;
+        cardFight._player1.OnReveal += PerformReveal;
+        cardFight._player2.OnReveal += PerformReveal;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -1023,6 +1025,65 @@ public class CardFightManager : NetworkBehaviour
         SLD.GetComponent<POWSLD>().Reset();
         inAnimation = false;
         yield return null;
+    }
+
+    public void PerformReveal(object sender, CardEventArgs e)
+    {
+        RpcPerformReveal(e.card, e.currentLocation.Item1);
+    }
+
+    [ClientRpc]
+    public void RpcPerformReveal(Card card, int location)
+    {
+        animations.Add(Reveal(card, location));
+    }
+
+    IEnumerator Reveal(Card card, int location)
+    {
+        if (GameObject.Find("EnemyHand").GetComponent<Hand>().IsInHand(card.tempID))
+        {
+            CardBehavior revealedCard = GameObject.Find(card.tempID.ToString()).GetComponent<CardBehavior>();
+            revealedCard.cardID = card.id;
+            revealedCard.inAnimation = true;
+            revealedCard.faceup = false;
+            StartCoroutine(revealedCard.Flip());
+            while (revealedCard.inAnimation)
+                yield return null;
+            revealedCard.inAnimation = true;
+            StartCoroutine(revealedCard.Flash(Color.white));
+            while (revealedCard.inAnimation)
+                yield return null;
+            revealedCard.inAnimation = true;
+            StartCoroutine(revealedCard.Flip());
+            while (revealedCard.inAnimation)
+                yield return null;
+        }
+        else if (GameObject.Find("PlayerHand").GetComponent<Hand>().IsInHand(card.tempID))
+        {
+            CardBehavior revealedCard = GameObject.Find(card.tempID.ToString()).GetComponent<CardBehavior>();
+            revealedCard.cardID = card.id;
+            revealedCard.inAnimation = true;
+            StartCoroutine(revealedCard.Flash(Color.white));
+            while (revealedCard.inAnimation)
+                yield return null;
+        }
+        else if (location == Location.Deck)
+        {
+            CardBehavior revealedCard = CreateNewCard(card.id, card.tempID).GetComponent<CardBehavior>();
+            if (isPlayerAction(card.originalOwner))
+                revealedCard.transform.SetParent(GameObject.Find("PlayerDeck").transform);
+            else
+                revealedCard.transform.SetParent(GameObject.Find("EnemyDeck").transform);
+            revealedCard.transform.localPosition = Vector3.zero;
+            revealedCard.inAnimation = true;
+            yield return null;
+            StartCoroutine(revealedCard.Flash(Color.white));
+            while (revealedCard.inAnimation)
+                yield return null;
+            revealedCard.transform.SetParent(null);
+            GameObject.Destroy(revealedCard.gameObject);
+        }
+        inAnimation = false;
     }
 
     public static Sprite LoadSprite(string filename)
