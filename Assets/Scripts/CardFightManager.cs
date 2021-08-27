@@ -35,7 +35,7 @@ public class CardFightManager : NetworkBehaviour
     public VisualInputManager inputManager;
     public Dictionary<string, Card> cardDict;
     public string SQLpath;
-    bool inAnimation = false;
+    public bool inAnimation = false;
     public List<IEnumerator> animations = new List<IEnumerator>();
 
     [SyncVar]
@@ -81,13 +81,13 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd03.txt", LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd05.txt", LoadCode.WithRideDeck), 1);
         }
         else
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd03.txt", LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd05.txt", LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -161,6 +161,11 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnAttackHits += CheckIfAttackHits;
         cardFight._player1.OnReveal += PerformReveal;
         cardFight._player2.OnReveal += PerformReveal;
+        cardFight._player1.OnSetPrison += PerformSetPrison;
+        cardFight._player2.OnSetPrison += PerformSetPrison;
+        cardFight._player1.OnImprison += PerformImprison;
+        cardFight._player2.OnImprison += PerformImprison;
+        cardFight.OnFree += PerformFree;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
@@ -196,6 +201,8 @@ public class CardFightManager : NetworkBehaviour
         }
         PlayerDropZone.GetComponent<Pile>().InitializeCount(0);
         EnemyDropZone.GetComponent<Pile>().InitializeCount(0);
+        Globals.Instance.playerOrderZone.GetComponent<Pile>().InitializeCount(0);
+        Globals.Instance.enemyOrderZone.GetComponent<Pile>().InitializeCount(0);
     }
 
     [ClientRpc]
@@ -379,6 +386,24 @@ public class CardFightManager : NetworkBehaviour
             {
                 Debug.Log("order area here");
                 zone = Globals.Instance.orderArea;
+            }
+            else if (location == Location.Order)
+            {
+                Debug.Log("order zone here");
+                if (isPlayerAction(card.originalOwner))
+                {
+                    if (card.unitType > -1) // for imprisoning
+                        zone = Globals.Instance.enemyOrderZone.gameObject;
+                    else
+                        zone = Globals.Instance.playerOrderZone.gameObject;
+                }
+                else
+                {
+                    if (card.unitType > -1)
+                        zone = Globals.Instance.playerOrderZone.gameObject;
+                    else
+                        zone = Globals.Instance.enemyOrderZone.gameObject;
+                }
             }
             else if (location == -1)
             {
@@ -1084,6 +1109,66 @@ public class CardFightManager : NetworkBehaviour
             GameObject.Destroy(revealedCard.gameObject);
         }
         inAnimation = false;
+    }
+
+    public void PerformSetPrison(object sender, CardEventArgs e)
+    {
+        RpcSetPrison(e.playerID);
+    }
+
+    [ClientRpc]
+    public void RpcSetPrison(int playerID)
+    {
+        IEnumerator Dialog()
+        {
+            if (isPlayerAction(playerID))
+                Globals.Instance.playerMiscStats.SetPrison();
+            else
+                Globals.Instance.enemyMiscStats.SetPrison();
+            inAnimation = false;
+            yield return null;
+        }
+        animations.Add(Dialog());
+    }
+
+    public void PerformImprison(object sender, CardEventArgs e)
+    {
+        RpcPerformImprison(e.playerID);
+    }
+
+    [ClientRpc]
+    public void RpcPerformImprison(int playerID)
+    {
+        IEnumerator Dialog()
+        {
+            if (isPlayerAction(playerID))
+                Globals.Instance.playerMiscStats.Imprison();
+            else
+                Globals.Instance.enemyMiscStats.Imprison();
+            inAnimation = false;
+            yield return null;
+        }
+        animations.Add(Dialog());
+    }
+
+    public void PerformFree(object sender, CardEventArgs e)
+    {
+        RpcPerformFree(e.playerID);
+    }
+
+    [ClientRpc]
+    public void RpcPerformFree(int playerID)
+    {
+        IEnumerator Dialog()
+        {
+            if (isPlayerAction(playerID))
+                Globals.Instance.playerMiscStats.Free();
+            else
+                Globals.Instance.enemyMiscStats.Free();
+            inAnimation = false;
+            yield return null;
+        }
+        animations.Add(Dialog());
     }
 
     public static Sprite LoadSprite(string filename)

@@ -53,11 +53,11 @@ public class CardBehavior : MonoBehaviour
             originalPosition = this.transform.position;
         if (this.cardID != "" && (this.faceup || (!this.faceup && this.transform.parent != GameObject.Find("EnemyHand").transform && !this.transform.parent.name.Contains("Deck"))))
         {
-            ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
             card = cardFightManager.LookUpCard(cardID);
             CardName.text = card.name;
             effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
             CardEffect.text = effect;
+            ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
         }
         if (this.transform.parent.name == "PlayerHand" && inputManager.cardsAreHoverable)
         {

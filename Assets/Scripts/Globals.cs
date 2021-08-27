@@ -17,6 +17,11 @@ public class Globals : MonoBehaviour
     public GameObject cardPrefab;
     public GameObject AbilityBox;
     public GameObject orderArea;
+    public GameObject ZoomIn;
+    public Pile playerOrderZone;
+    public Pile enemyOrderZone;
+    public MiscStats playerMiscStats;
+    public MiscStats enemyMiscStats;
     public Button selectionButton1;
     public Button selectionButton2;
     public Vector2 ResetPosition;

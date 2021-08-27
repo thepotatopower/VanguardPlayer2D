@@ -82,7 +82,10 @@ public class Pile : NetworkBehaviour
     public void OnPointerEnter()
     {
         if (topCard.GetComponent<Image>().enabled)
+        {
             topCard.GetComponent<CardBehavior>().DisplayCard();
+            Globals.Instance.ZoomIn.GetComponent<Image>().sprite = topCard.GetComponent<Image>().sprite;
+        }
     }
 
     public bool ContainsCard(int tempID)

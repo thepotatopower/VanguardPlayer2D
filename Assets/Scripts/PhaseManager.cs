@@ -96,6 +96,7 @@ public class PhaseManager : MonoBehaviour
 
     void BattlePhase()
     {
+        Debug.Log("deactivating end phase button");
         ResetAll();
         BattlePhaseButton.GetComponent<Image>().color = Color.green;
         BattlePhaseButton.interactable = true;

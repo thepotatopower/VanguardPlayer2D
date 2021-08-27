@@ -21,4 +21,9 @@ public class PileSelectArea : MonoBehaviour
     {
         pile.OnPointerEnter();
     }
+
+    public void OnPointerClick()
+    {
+        Globals.Instance.visualInputManager.OnPileClicked(pile);
+    }
 }
