@@ -77,17 +77,24 @@ public class CardFightManager : NetworkBehaviour
         cardPrefab = playerManager.cardPrefab;
         SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;";
         StartCoroutine(AnimateAnimations());
+        string deckPath = GameObject.Find("InputField").GetComponent<InputField>().text;
+        Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
+        Debug.Log("deckPath: " + deckPath);
+        if (deckPath == "")
+            deckPath = "dsd01.txt";
+        if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
+            deckPath = "dsd01.txt";
         if (isServer)
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd05.txt", LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../" + deckPath, LoadCode.WithRideDeck), 1);
         }
         else
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../dsd05.txt", LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../" + deckPath, LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -139,7 +146,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight = new VanguardEngine.CardFight();
         string luaPath = Application.dataPath + "/../lua";
         //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
-        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua");
+        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath);
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;

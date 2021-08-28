@@ -513,7 +513,7 @@ public class VisualInputManager : NetworkBehaviour
             {
                 case InputType.Reset:
                     receivedInput = true;
-                    ResetInputs();
+                    StartCoroutine(ResetInputs());
                     break;
                 case InputType.RPS:
                     Debug.Log("getting RPS");
@@ -634,8 +634,9 @@ public class VisualInputManager : NetworkBehaviour
         public const int SelectOption = 18;
     }
 
-    public void ResetInputs()
+    IEnumerator ResetInputs()
     {
+        Debug.Log("resetting inputs");
         player1_input = -1;
         player2_input = -1;
         input1 = 0;
@@ -664,6 +665,7 @@ public class VisualInputManager : NetworkBehaviour
             Debug.Log("remote resetting");
             playerManager.CmdChangeInput(2, -1);
         }
+        yield return null;
     }
 
     public IM InitializeInputManager()
@@ -771,7 +773,7 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             yield return new WaitForSeconds(1);
-            ResetInputs();
+            StartCoroutine(ResetInputs());
         }
         StartCoroutine(MoveTowards());
     }
@@ -1434,11 +1436,11 @@ public class VisualInputManager : NetworkBehaviour
     {
         Debug.Log("pile clicked");
         Buttons.transform.position = pile.gameObject.transform.position;
-        if (pile.gameObject.name == "PlayerRideDeck" && inputSignal == InputType.SelectRidePhaseAction && bool1)
+        if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerRideDeck" && inputSignal == InputType.SelectRidePhaseAction && bool1)
         {
             rideFromRideDeck.transform.SetParent(Buttons.transform);
         }
-        if (pile.gameObject.name == "EnemyOrderZone" && inputSignal == InputType.SelectMainPhaseAction && Globals.Instance.enemyMiscStats.prisoners > 0)
+        if (!cardFightManager.inAnimation && pile.gameObject.name == "EnemyOrderZone" && inputSignal == InputType.SelectMainPhaseAction && Globals.Instance.enemyMiscStats.prisoners > 0)
         {
             cardButton.transform.SetParent(Buttons.transform);
             cardButton.GetComponentInChildren<Text>().text = "Free";
@@ -1517,7 +1519,7 @@ public class VisualInputManager : NetworkBehaviour
 
     public void OnUnitClicked(int unitSlot, GameObject unit, bool selected)
     {
-        if (isActingPlayer())
+        if (isActingPlayer() && !cardFightManager.inAnimation)
         {
             if (inputSignal == InputType.SelectCallLocation)
             {

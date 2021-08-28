@@ -53,6 +53,8 @@ public class CardBehavior : MonoBehaviour
             originalPosition = this.transform.position;
         if (this.cardID != "" && (this.faceup || (!this.faceup && this.transform.parent != GameObject.Find("EnemyHand").transform && !this.transform.parent.name.Contains("Deck"))))
         {
+            if (cardFightManager == null)
+                Debug.Log("cardFightManager is null");
             card = cardFightManager.LookUpCard(cardID);
             CardName.text = card.name;
             effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
