@@ -1401,9 +1401,18 @@ public class VisualInputManager : NetworkBehaviour
         inputSignal = 0;
         receivedInput = false;
         Debug.Log("changed to false");
-        NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-        playerManager = networkIdentity.GetComponent<PlayerManager>();
-        playerManager.CmdReady();
+        IEnumerator Dialog()
+        {
+            while (!NetworkClient.ready)
+            {
+                Debug.Log("not ready");
+                yield return null;
+            }
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdReady();
+        }
+        StartCoroutine(Dialog());
     }
 
     public void ResetMiscellaneousButtons()

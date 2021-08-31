@@ -36,7 +36,7 @@ public class CardSelect : MonoBehaviour
 
     public void Initialize(string prompt, int min, int max)
     {
-        CardSelectPrompt.GetComponent<Text>().text = prompt;
+        CardSelectPrompt.GetComponent<Text>().text = prompt + " (min: " + min + ")"; 
         minSelect = min;
         maxSelect = max;
         if (minSelect == 0)

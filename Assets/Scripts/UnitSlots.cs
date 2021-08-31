@@ -70,7 +70,9 @@ public class UnitSlots : MonoBehaviour
 
     public GameObject GetUnitSlot(int fl)
     {
-        return _unitSlots[fl];
+        if (fl >= 0 && fl < _unitSlots.Length)
+            return _unitSlots[fl];
+        return null;
     }
 
     public void SwapUnitSlots(int previousFL, int currentFL)
@@ -83,20 +85,26 @@ public class UnitSlots : MonoBehaviour
         {
             Debug.Log("current is null");
             previous.DisableCard();
+            List<Card> soul = new List<Card>();
+            soul.AddRange(previous._soul);
             newUnit = previous.RemoveCard(Int32.Parse(previous.unit.name));
             if (newUnit == null)
                 return;
             current.AddCard(previous._grade, previous._critical, previous._power, previous._originalPower, previous._upright, previous._faceup, previous._cardID, newUnit);
+            current._soul.AddRange(soul);
             return;
         }
         else if (previous.unit == null)
         {
             Debug.Log("previous is null");
             current.DisableCard();
+            List<Card> soul = new List<Card>();
+            soul.AddRange(current._soul);
             newUnit = current.RemoveCard(Int32.Parse(current.unit.name));
             if (newUnit == null)
                 return;
             previous.AddCard(current._grade, current._critical, current._power, current._originalPower, current._upright, current._faceup, current._cardID, newUnit);
+            previous._soul.AddRange(soul);
             return;
         }
         else if (previous.unit == null && current.unit == null)
@@ -204,6 +212,16 @@ public class UnitSlots : MonoBehaviour
                 return true;
         }
         return false;
+    }
+
+    public UnitSlotBehavior FindUnitSlot(int tempID)
+    {
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null && _unitSlots[i].GetComponent<UnitSlotBehavior>().unit != null && _unitSlots[i].GetComponent<UnitSlotBehavior>().unit.name == tempID.ToString())
+                return _unitSlots[i].GetComponent<UnitSlotBehavior>();
+        }
+        return null;
     }
 
     public bool IsUnit(int tempID)

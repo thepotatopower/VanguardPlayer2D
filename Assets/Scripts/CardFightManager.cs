@@ -80,10 +80,8 @@ public class CardFightManager : NetworkBehaviour
         string deckPath = GameObject.Find("InputField").GetComponent<InputField>().text;
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
-        if (deckPath == "")
-            deckPath = "dsd01.txt";
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "dsd01.txt";
+            deckPath = "eugene.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -146,7 +144,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight = new VanguardEngine.CardFight();
         string luaPath = Application.dataPath + "/../lua";
         //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
-        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath);
+        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
@@ -172,6 +170,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnSetPrison += PerformSetPrison;
         cardFight._player1.OnImprison += PerformImprison;
         cardFight._player2.OnImprison += PerformImprison;
+        inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
@@ -436,18 +435,30 @@ public class CardFightManager : NetworkBehaviour
 
         if (previousLocation == Location.Soul)
         {
-            Debug.Log("removing from soul");
-            Globals.Instance.unitSlots.GetUnitSlot(previousFL).GetComponent<UnitSlotBehavior>().RemoveFromSoul(card);
+            if (Globals.Instance.unitSlots.GetUnitSlot(previousFL) != null)
+            {
+                Debug.Log("removing from soul");
+                Globals.Instance.unitSlots.GetUnitSlot(previousFL).GetComponent<UnitSlotBehavior>().RemoveFromSoul(card);
+            }
+            else
+            {
+                previousZone = Globals.Instance.guardianCircle.gameObject;
+            }
         }
         if (currentLocation == Location.Soul)
         {
             bool addToSoul = true;
-            foreach (Card c in Globals.Instance.unitSlots.GetUnitSlot(currentFL).GetComponent<UnitSlotBehavior>()._soul)
+            if (Globals.Instance.unitSlots.GetUnitSlot(currentFL) == null)
+                addToSoul = false;
+            else
             {
-                if (c.tempID == card.tempID)
+                foreach (Card c in Globals.Instance.unitSlots.GetUnitSlot(currentFL).GetComponent<UnitSlotBehavior>()._soul)
                 {
-                    addToSoul = false;
-                    break;
+                    if (c.tempID == card.tempID)
+                    {
+                        addToSoul = false;
+                        break;
+                    }
                 }
             }
             if (addToSoul)
@@ -499,6 +510,14 @@ public class CardFightManager : NetworkBehaviour
         {
             Debug.Log("removing from gc");
             newCard = Globals.Instance.guardianCircle.RemoveCard(card.tempID);
+            if (newCard == null)
+            {
+                newCard = CreateNewCard(card.id, card.tempID);
+                newCard.transform.SetParent(Field.transform);
+                newCard.transform.position = previousZone.transform.position;
+                if (previousZone.name.Contains("Enemy"))
+                    newCard.transform.Rotate(0, 0, 180);
+            }
         }
         else if (previousZone.GetComponent<DamageZone>() != null)
             newCard = previousZone.GetComponent<DamageZone>().RemoveCard(card.tempID);
@@ -1176,6 +1195,19 @@ public class CardFightManager : NetworkBehaviour
             yield return null;
         }
         animations.Add(Dialog());
+    }
+
+    public void PerformChosen(object sender, CardEventArgs e)
+    {
+        RpcPerformChosen(e.card.tempID);
+    }
+
+    [ClientRpc]
+    public void RpcPerformChosen(int tempID)
+    {
+        UnitSlotBehavior unitSlot = Globals.Instance.unitSlots.FindUnitSlot(tempID);
+        if (unitSlot != null)
+            animations.Add(FlashUnit(unitSlot._FL));
     }
 
     public static Sprite LoadSprite(string filename)

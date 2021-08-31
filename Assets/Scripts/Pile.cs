@@ -48,7 +48,7 @@ public class Pile : NetworkBehaviour
 
     public void AddCard(Card card)
     {
-        pile.Add(card);
+        pile.Insert(0, card);
         UpdateCount(1);
         topCard.GetComponent<Image>().enabled = true;
         topCard.cardID = card.id;
@@ -61,6 +61,14 @@ public class Pile : NetworkBehaviour
     public void RemoveCard(Card card)
     {
         pile.Remove(card);
+        foreach (Card c in pile)
+        {
+            if (c.tempID == card.tempID)
+            {
+                pile.Remove(c);
+                break;
+            }
+        }
         UpdateCount(-1);
         if (_count > 0)
         {
@@ -81,10 +89,9 @@ public class Pile : NetworkBehaviour
 
     public void OnPointerEnter()
     {
-        if (topCard.GetComponent<Image>().enabled)
+        if (addToTop && topCard.GetComponent<Image>().enabled)
         {
-            topCard.GetComponent<CardBehavior>().DisplayCard();
-            Globals.Instance.ZoomIn.GetComponent<Image>().sprite = topCard.GetComponent<Image>().sprite;
+            Globals.Instance.cardFightManager.DisplayCard(topCard.cardID);
         }
     }
 

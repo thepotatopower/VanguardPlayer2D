@@ -89,6 +89,7 @@ public class PlayerManager : NetworkBehaviour
     [Command]
     public void CmdChangeInputs(List<int> inputs)
     {
+        Debug.Log("CmdChangeInputs");
         VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
         foreach (int input in inputs)
             vim.inputs.Add(input);
@@ -99,6 +100,7 @@ public class PlayerManager : NetworkBehaviour
     [Command]
     public void CmdSingleInput(int selection)
     {
+        Debug.Log("CmdSingleInput");
         VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
         vim.player1_input = selection;
         vim.input1 = selection;
@@ -109,6 +111,7 @@ public class PlayerManager : NetworkBehaviour
     [Command]
     public void CmdSingleInputs(int selection1, int selection2)
     {
+        Debug.Log("CmdSingleInputs");
         VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
         vim.input1 = selection1;
         vim.input2 = selection2;
@@ -119,14 +122,20 @@ public class PlayerManager : NetworkBehaviour
     [Command]
     public void CmdReady()
     {
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        vim.numResponses--;
-        Debug.Log("numResponses: " + vim.numResponses.ToString());
-        if (vim.numResponses == 0)
+        IEnumerator Dialog()
         {
-            Debug.Log("ready to continue");
-            vim.readyToContinue = true;
+            while (!NetworkClient.ready)
+                yield return null;
+            VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+            vim.numResponses--;
+            Debug.Log("numResponses: " + vim.numResponses.ToString());
+            if (vim.numResponses == 0)
+            {
+                Debug.Log("ready to continue");
+                vim.readyToContinue = true;
+            }
         }
+        StartCoroutine(Dialog());
     }
 
     [ClientRpc]
