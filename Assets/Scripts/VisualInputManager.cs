@@ -968,7 +968,10 @@ public class VisualInputManager : NetworkBehaviour
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == rideFromRideDeck)
+                {
+                    Debug.Log("rideFromRideDeck pressed");
                     selection = RidePhaseAction.RideFromRideDeck;
+                }
                 else if (waitForButton.PressedButton == cardButton)
                 {
                     selection = RidePhaseAction.RideFromHand;
@@ -1024,7 +1027,8 @@ public class VisualInputManager : NetworkBehaviour
                 PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = true;
             else
                 PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = true;
-            waitForButton = new WaitForUIButtons(cardButton, cardButton2, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
+            waitForButton = new WaitForUIButtons(cardButton, cardButton2, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton,
+                Globals.Instance.soulCharge, Globals.Instance.counterCharge, Globals.Instance.damage, Globals.Instance.heal);
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == cardButton)
@@ -1055,6 +1059,14 @@ public class VisualInputManager : NetworkBehaviour
                 else if ((waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton) ||
                     (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton))
                     selection = MainPhaseAction.End;
+                else if (waitForButton.PressedButton == Globals.Instance.soulCharge)
+                    selection = MainPhaseAction.SoulCharge;
+                else if (waitForButton.PressedButton == Globals.Instance.counterCharge)
+                    selection = MainPhaseAction.CounterCharge;
+                else if (waitForButton.PressedButton == Globals.Instance.damage)
+                    selection = MainPhaseAction.TakeDamage;
+                else if (waitForButton.PressedButton == Globals.Instance.heal)
+                    selection = MainPhaseAction.Heal;
                 yield return null;
             }
             PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = false;
@@ -1445,7 +1457,7 @@ public class VisualInputManager : NetworkBehaviour
     {
         Debug.Log("pile clicked");
         Buttons.transform.position = pile.gameObject.transform.position;
-        if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerRideDeck" && inputSignal == InputType.SelectRidePhaseAction && bool1)
+        if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerRideDeck" && inputSignal == InputType.SelectRidePhaseAction && isActingPlayer() && bool1)
         {
             rideFromRideDeck.transform.SetParent(Buttons.transform);
         }

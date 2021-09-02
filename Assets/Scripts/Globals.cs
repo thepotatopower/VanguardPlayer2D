@@ -24,6 +24,10 @@ public class Globals : MonoBehaviour
     public MiscStats enemyMiscStats;
     public Button selectionButton1;
     public Button selectionButton2;
+    public Button soulCharge;
+    public Button counterCharge;
+    public Button damage;
+    public Button heal;
     public Vector2 ResetPosition;
     public Vector2 POWPosition;
     public Vector2 SLDPosition;

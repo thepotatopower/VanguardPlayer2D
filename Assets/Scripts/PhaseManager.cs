@@ -70,6 +70,7 @@ public class PhaseManager : MonoBehaviour
     void StandPhase()
     {
         ResetAll();
+        Debug.Log("phase manager stand phase");
         StandPhaseButton.GetComponent<Image>().color = Color.green;
         StandPhaseButton.interactable = true;
     }
@@ -77,6 +78,7 @@ public class PhaseManager : MonoBehaviour
     void RidePhase()
     {
         ResetAll();
+        Debug.Log("phase manager ride phase");
         RidePhaseButton.GetComponent<Image>().color = Color.green;
         RidePhaseButton.interactable = true;
         //if (_isActingPlayer)
@@ -86,6 +88,7 @@ public class PhaseManager : MonoBehaviour
     void MainPhase()
     {
         ResetAll();
+        Debug.Log("phase manager main phase");
         MainPhaseButton.GetComponent<Image>().color = Color.green;
         MainPhaseButton.interactable = true;
         //if (_isActingPlayer && _turnCount > 1)
@@ -96,8 +99,8 @@ public class PhaseManager : MonoBehaviour
 
     void BattlePhase()
     {
-        Debug.Log("deactivating end phase button");
         ResetAll();
+        Debug.Log("phase manager battle phase"); 
         BattlePhaseButton.GetComponent<Image>().color = Color.green;
         BattlePhaseButton.interactable = true;
         //if (_isActingPlayer)

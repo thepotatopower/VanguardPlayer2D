@@ -81,18 +81,18 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "eugene.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
         if (isServer)
         {
             Debug.Log("this is server");
             host = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../" + deckPath, LoadCode.WithRideDeck), 1);
+            playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 1);
         }
         else
         {
             Debug.Log("this is client");
             remote = networkIdentity;
-            playerManager.CmdInitialize(LoadCards.GenerateList(Application.dataPath + "/../" + deckPath, LoadCode.WithRideDeck), 2);
+            playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 2);
         }
     }
 
@@ -170,6 +170,8 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnSetPrison += PerformSetPrison;
         cardFight._player1.OnImprison += PerformImprison;
         cardFight._player2.OnImprison += PerformImprison;
+        cardFight._player1.OnAttackEnds += CheckIfAttackHits;
+        cardFight._player2.OnAttackEnds += CheckIfAttackHits;
         inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
         RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
@@ -659,6 +661,8 @@ public class CardFightManager : NetworkBehaviour
         if (currentZone.GetComponent<Pile>() != null)
             currentZone.GetComponent<Pile>().AddCard(card);
 
+        Globals.Instance.playerMiscStats.SetWorld(Globals.Instance.playerOrderZone.GetComponent<Pile>().pile);
+        Globals.Instance.enemyMiscStats.SetWorld(Globals.Instance.enemyOrderZone.GetComponent<Pile>().pile);
         inputManager.cardsAreHoverable = true;
         inAnimation = false;
     }
