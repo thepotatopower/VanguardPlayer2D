@@ -122,20 +122,14 @@ public class PlayerManager : NetworkBehaviour
     [Command]
     public void CmdReady()
     {
-        IEnumerator Dialog()
+        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+        vim.numResponses--;
+        Debug.Log("numResponses: " + vim.numResponses.ToString());
+        if (vim.numResponses == 0)
         {
-            while (!NetworkClient.ready)
-                yield return null;
-            VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-            vim.numResponses--;
-            Debug.Log("numResponses: " + vim.numResponses.ToString());
-            if (vim.numResponses == 0)
-            {
-                Debug.Log("ready to continue");
-                vim.readyToContinue = true;
-            }
+            Debug.Log("ready to continue");
+            vim.readyToContinue = true;
         }
-        StartCoroutine(Dialog());
     }
 
     [ClientRpc]

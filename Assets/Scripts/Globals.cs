@@ -28,6 +28,7 @@ public class Globals : MonoBehaviour
     public Button counterCharge;
     public Button damage;
     public Button heal;
+    public CardBehavior callCard;
     public Vector2 ResetPosition;
     public Vector2 POWPosition;
     public Vector2 SLDPosition;

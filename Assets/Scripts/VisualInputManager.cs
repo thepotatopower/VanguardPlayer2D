@@ -78,6 +78,10 @@ public class VisualInputManager : NetworkBehaviour
     public int int1 = 0;
     [SyncVar]
     public int int2 = 0;
+    [SyncVar]
+    public string string1 = "";
+    [SyncVar]
+    public int actingPlayer = 1;
     public SyncList<int> inputs = new SyncList<int>();
     public SyncList<int> tempIDs = new SyncList<int>();
     public SyncList<int> tempIDs2 = new SyncList<int>();
@@ -105,7 +109,9 @@ public class VisualInputManager : NetworkBehaviour
     Vector3 currentCardSelectPosition;
     Vector3 currentSelectionButton1Position;
     Vector3 currentSelectionButton2Position;
+    Vector3 currentCallCardPosition;
     WaitForUIButtons waitForButton;
+    IEnumerator currentRoutine = null;
 
     //VanguardEngine's InputManager logic
     public class IM : InputManager
@@ -281,6 +287,7 @@ public class VisualInputManager : NetworkBehaviour
             bool proceed = false;
             while (!proceed)
             {
+                inputManager.string1 = card_input.id;
                 inputManager.inputSignal = InputType.SelectCallLocation;
                 WaitForReadyToContinue();
                 if (!_ints.Contains(int_input) && ((_ints2.Count > 0 && _ints2.Contains(int_input)) || _ints2.Count == 0))
@@ -485,6 +492,7 @@ public class VisualInputManager : NetworkBehaviour
         cancelButton.transform.position = new Vector3(10000, 0, 0);
         POW.transform.position = new Vector3(10000, 0, 0);
         SLD.transform.position = new Vector3(10000, 0, 0);
+        currentCallCardPosition = Globals.Instance.callCard.transform.position;
         ResetMiscellaneousButtons();
         cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         cardSelect.Hide();
@@ -509,69 +517,69 @@ public class VisualInputManager : NetworkBehaviour
     {
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
         {
-            switch (inputSignal)
+            receivedInput = true;
+            if (inputSignal == InputType.Reset)
+                StartCoroutine(ResetInputs());
+            else
             {
-                case InputType.Reset:
-                    receivedInput = true;
-                    StartCoroutine(ResetInputs());
-                    break;
-                case InputType.RPS:
-                    Debug.Log("getting RPS");
-                    receivedInput = true;
-                    GetRPSInput();
-                    break;
-                case InputType.ResolveRPS:
-                    receivedInput = true;
-                    ResolveRPS();
-                    break;
-                case InputType.Mulligan:
-                    receivedInput = true;
-                    StartCoroutine(Mulligan());
-                    break;
-                case InputType.YesNo:
-                    receivedInput = true;
-                    StartCoroutine(YesNo());
-                    break;
-                case InputType.SelectFromList:
-                    receivedInput = true;
-                    StartCoroutine(SelectFromList());
-                    break;
-                case InputType.SelectRidePhaseAction:
-                    receivedInput = true;
-                    StartCoroutine(SelectRidePhaseAction());
-                    break;
-                case InputType.SelectMainPhaseAction:
-                    receivedInput = true;
-                    StartCoroutine(SelectMainPhaseAction());
-                    break;
-                case InputType.SelectCallLocation:
-                    receivedInput = true;
-                    StartCoroutine(SelectCallLocation());
-                    break;
-                case InputType.SelectBattlePhaseAction:
-                    receivedInput = true;
-                    StartCoroutine(SelectBattlePhaseAction());
-                    break;
-                case InputType.SelectUnitToAttack:
-                    receivedInput = true;
-                    StartCoroutine(SelectUnitToAttack());
-                    break;
-                case InputType.SelectGuardStepAction:
-                    receivedInput = true;
-                    StartCoroutine(SelectGuardStepAction());
-                    break;
-                case InputType.SelectActiveUnit:
-                    receivedInput = true;
-                    StartCoroutine(SelectActiveUnit());
-                    break;
-                case InputType.SelectAbility:
-                    receivedInput = true;
-                    StartCoroutine(SelectAbility());
-                    break;
-                case InputType.SelectOption:
-                    receivedInput = true;
-                    StartCoroutine(SelectOption());
-                    break;
+                switch (inputSignal)
+                {
+                    case InputType.RPS:
+                        Debug.Log("getting RPS");
+                        GetRPSInput();
+                        break;
+                    case InputType.ResolveRPS:
+                        ResolveRPS();
+                        break;
+                    case InputType.Mulligan:
+                        currentRoutine = Mulligan();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.YesNo:
+                        currentRoutine = YesNo();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectFromList:
+                        currentRoutine = SelectFromList();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectRidePhaseAction:
+                        currentRoutine = SelectRidePhaseAction();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectMainPhaseAction:
+                        currentRoutine = SelectMainPhaseAction();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectCallLocation:
+                        currentRoutine = SelectCallLocation();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectBattlePhaseAction:
+                        currentRoutine = SelectBattlePhaseAction();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectUnitToAttack:
+                        currentRoutine = SelectUnitToAttack();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectGuardStepAction:
+                        currentRoutine = SelectGuardStepAction();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectActiveUnit:
+                        currentRoutine = SelectActiveUnit();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectAbility:
+                        currentRoutine = SelectAbility();
+                        StartCoroutine(currentRoutine);
+                        break;
+                    case InputType.SelectOption:
+                        currentRoutine = SelectOption();
+                        StartCoroutine(currentRoutine);
+                        break;
+                }
             }
         }
         if (Input.GetMouseButtonDown(0))
@@ -637,6 +645,9 @@ public class VisualInputManager : NetworkBehaviour
     IEnumerator ResetInputs()
     {
         Debug.Log("resetting inputs");
+        if (currentRoutine != null)
+            StopCoroutine(currentRoutine);
+        currentRoutine = null;
         player1_input = -1;
         player2_input = -1;
         input1 = 0;
@@ -964,6 +975,7 @@ public class VisualInputManager : NetworkBehaviour
             miscellaneousButtons.Add(rideFromRideDeck);
             miscellaneousButtons.Add(cardButton);
             PhaseManager.GetComponent<PhaseManager>().MainPhaseButton.interactable = true;
+            PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = false;
             waitForButton = new WaitForUIButtons(rideFromRideDeck, cardButton, PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
             while (selection < 0)
             {
@@ -1146,6 +1158,9 @@ public class VisualInputManager : NetworkBehaviour
             yield return null;
         }
         toggle.transform.localPosition = Globals.Instance.TogglePosition;
+        Globals.Instance.callCard.transform.localPosition = new Vector3(0, 200, 0);
+        Globals.Instance.callCard.cardID = string1;
+        Globals.Instance.callCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(string1));
         clicked = false;
         if (isActingPlayer())
         {
@@ -1622,6 +1637,7 @@ public class VisualInputManager : NetworkBehaviour
             cardSelect.transform.position = currentCardSelectPosition;
             Globals.Instance.selectionButton1.transform.position = currentSelectionButton1Position;
             Globals.Instance.selectionButton2.transform.position = currentSelectionButton2Position;
+            Globals.Instance.callCard.transform.position = currentCallCardPosition;
             browsingField = false;
             toggle.GetComponentInChildren<Text>().text = "Hide Prompt";
         }
@@ -1633,12 +1649,14 @@ public class VisualInputManager : NetworkBehaviour
             currentCardSelectPosition = cardSelect.transform.position;
             currentSelectionButton1Position = Globals.Instance.selectionButton1.transform.position;
             currentSelectionButton2Position = Globals.Instance.selectionButton2.transform.position;
+            currentCallCardPosition = Globals.Instance.callCard.transform.position;
             messageBox.transform.position = Globals.Instance.ResetPosition;
             yesButton.transform.position = Globals.Instance.ResetPosition;
             noButton.transform.position = Globals.Instance.ResetPosition;
             cardSelect.transform.position = Globals.Instance.ResetPosition;
             Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
             Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
+            Globals.Instance.callCard.transform.position = Globals.Instance.ResetPosition;
             ResetMiscellaneousButtons();
             selectedGameObject = null;
             OnCardViewerCancelClicked();
@@ -1669,6 +1687,7 @@ public class VisualInputManager : NetworkBehaviour
         currentCardSelectPosition = Globals.Instance.ResetPosition;
         Globals.Instance.selectionButton1.transform.position = Globals.Instance.ResetPosition;
         Globals.Instance.selectionButton2.transform.position = Globals.Instance.ResetPosition;
+        Globals.Instance.callCard.transform.position = Globals.Instance.ResetPosition;
         ResetMiscellaneousButtons();
         miscellaneousButtons.Clear();
     }

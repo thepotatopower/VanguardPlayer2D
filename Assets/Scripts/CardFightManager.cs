@@ -255,9 +255,15 @@ public class CardFightManager : NetworkBehaviour
             }
         }
         if (e.previousLocation == null)
+        {
             Debug.Log("error with previouslocation");
+            return;
+        }
         if (e.currentLocation == null)
+        {
             Debug.Log("error with currentlocation");
+            return;
+        }
         RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card, grade, soul, critical, faceup, upright);
     }
 
@@ -468,6 +474,23 @@ public class CardFightManager : NetworkBehaviour
                 Debug.Log("adding to soul");
                 Globals.Instance.unitSlots.GetUnitSlot(currentFL).GetComponent<UnitSlotBehavior>()._soul.Add(card);
             }
+        }
+
+        if (currentZone != null && currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul && previousZone == null)
+        {
+            GameObject token = CreateNewCard(card.id, card.tempID);
+            Debug.Log("token generated: " + token.name);
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.grade, critical, card.power, card.power, true, true, card.id, token);
+            inAnimation = false;
+            yield break;
+        }
+        
+        if (currentZone == null && previousZone != null && previousZone.GetComponent<UnitSlotBehavior>() != null)
+        {
+            Debug.Log("removing token");
+            previousZone.GetComponent<UnitSlotBehavior>().RemoveCard(card.tempID);
+            inAnimation = false;
+            yield break;
         }
 
         if (currentZone == null || previousZone == null || (currentFL >= 0 && previousFL >= 0 && currentFL == previousFL))
@@ -1042,7 +1065,10 @@ public class CardFightManager : NetworkBehaviour
     {
         Player player = sender as Player;
         Debug.Log("updating power value: " + e.currentPower);
-        RpcChangeCardValue(e.circle, e.currentPower, e.currentCritical);
+        if (e == null)
+            Debug.Log("error with CardEventArgs");
+        else
+            RpcChangeCardValue(e.circle, e.currentPower, e.currentCritical);
     }
 
     [ClientRpc]
@@ -1216,19 +1242,15 @@ public class CardFightManager : NetworkBehaviour
 
     public static Sprite LoadSprite(string filename)
     {
+        byte[] bytes;
         if (System.IO.File.Exists(filename))
-        {
-            byte[] bytes = System.IO.File.ReadAllBytes(filename);
-            Texture2D texture = new Texture2D(1, 1);
-            texture.LoadImage(bytes);
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-            return sprite;
-        }
+            bytes = System.IO.File.ReadAllBytes(filename);
         else
-        {
-            Debug.Log(filename + " doesn't exist.");
-            return null;
-        }
+            bytes = System.IO.File.ReadAllBytes(Application.dataPath + "/../cardart/FaceDownCard.jpg");
+        Texture2D texture = new Texture2D(1, 1);
+        texture.LoadImage(bytes);
+        Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+        return sprite;
     }
 
     void Update()

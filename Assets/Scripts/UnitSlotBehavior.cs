@@ -81,7 +81,9 @@ public class UnitSlotBehavior : MonoBehaviour
         _cardID = cardID;
         GameObject.Destroy(unit);
         unit = card;
+        Debug.Log("adding card: " + unit.name);
         unit.transform.SetParent(this.transform);
+        Debug.Log("parent of card: " + unit.transform.parent.name);
         unit.transform.SetAsFirstSibling();
         unit.transform.localPosition = new Vector3(0, 0, 0);
         unit.transform.localScale = Vector3.one / (float)1.1;
