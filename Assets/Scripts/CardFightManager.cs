@@ -81,7 +81,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/hexaorb.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -488,7 +488,12 @@ public class CardFightManager : NetworkBehaviour
         if (currentZone == null && previousZone != null && previousZone.GetComponent<UnitSlotBehavior>() != null)
         {
             Debug.Log("removing token");
-            previousZone.GetComponent<UnitSlotBehavior>().RemoveCard(card.tempID);
+            GameObject removedCard = previousZone.GetComponent<UnitSlotBehavior>().RemoveCard(card.tempID);
+            if (removedCard != false)
+            {
+                removedCard.transform.SetParent(null);
+                GameObject.Destroy(removedCard);
+            }
             inAnimation = false;
             yield break;
         }

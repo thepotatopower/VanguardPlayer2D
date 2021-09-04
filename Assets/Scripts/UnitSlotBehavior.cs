@@ -79,7 +79,11 @@ public class UnitSlotBehavior : MonoBehaviour
         _upright = upright;
         _faceup = faceup;
         _cardID = cardID;
-        GameObject.Destroy(unit);
+        if (unit != null)
+        {
+            unit.transform.SetParent(null);
+            GameObject.Destroy(unit);
+        }
         unit = card;
         Debug.Log("adding card: " + unit.name);
         unit.transform.SetParent(this.transform);
@@ -128,9 +132,10 @@ public class UnitSlotBehavior : MonoBehaviour
     public GameObject RemoveCard(int tempID)
     {
         GameObject removedCard = null;
-        showStats = false;
         if (tempID == Int32.Parse(unit.name) && unit != null)
         {
+            showStats = false;
+            Debug.Log("UnitSlotBehavior is removing " + tempID.ToString());
             _soul.Clear();
             removedCard = unit;
             Vector3 currentPosition = removedCard.transform.position;
