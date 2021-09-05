@@ -12,6 +12,8 @@ public class CardSelectItemBehavior : MonoBehaviour
     public int tempID;
     public bool selected = false;
     public Color32 defaultColor;
+    public GameObject NumberCircle;
+    public Text Number;
     
     void Start()
     {
@@ -38,20 +40,42 @@ public class CardSelectItemBehavior : MonoBehaviour
     {
         if (selected)
         {
-            this.GetComponent<Image>().color = new Color32(195, 243, 250, 0);
-            selected = false;
             cardSelect.ItemDeselected(tempID);
-            Globals.Instance.unitSlots.Reset(tempID);
+            Deselect();
         }
         else
         {
-            if (!cardSelect.CapacityMet())
-            {
-                this.GetComponent<Image>().color = new Color32(92, 233, 255, 255);
-                selected = true;
-                cardSelect.ItemSelected(tempID);
-                Globals.Instance.unitSlots.MarkAsSelectable(tempID);
-            }
+            //if (!cardSelect.CapacityMet())
+            //{
+            //    this.GetComponent<Image>().color = new Color32(92, 233, 255, 255);
+            //    selected = true;
+            //    cardSelect.ItemSelected(tempID, this);
+            //    Globals.Instance.unitSlots.MarkAsSelectable(tempID);
+            //}
+            this.GetComponent<Image>().color = new Color32(92, 233, 255, 255);
+            selected = true;
+            cardSelect.ItemSelected(tempID, this);
+            Globals.Instance.unitSlots.MarkAsSelectable(tempID);
         }
+    }
+
+    public void Deselect()
+    {
+        this.GetComponent<Image>().color = new Color32(195, 243, 250, 0);
+        selected = false;
+        Globals.Instance.unitSlots.Reset(tempID);
+        NumberCircle.SetActive(false);
+    }
+
+    public void GiveNumber(int number)
+    {
+        NumberCircle.SetActive(true);
+        Number.text = number.ToString();
+    }
+
+    public void RemoveNumber()
+    {
+        if (NumberCircle.activeSelf)
+            NumberCircle.SetActive(false);
     }
 }

@@ -12,6 +12,7 @@ public class CardSelect : MonoBehaviour
     public Button SelectButton;
     public Button CancelButton;
     public List<int> selected;
+    public List<CardSelectItemBehavior> selectedItems;
     public int maxSelect = 1;
     public int minSelect = 1;
     GameObject CardSelectItem;
@@ -22,6 +23,7 @@ public class CardSelect : MonoBehaviour
     {
         selected = new List<int>();
         CardSelectItems = new List<GameObject>();
+        selectedItems = new List<CardSelectItemBehavior>();
     }
 
     public void Show()
@@ -82,22 +84,40 @@ public class CardSelect : MonoBehaviour
             GameObject.Destroy(content.transform.GetChild(i).gameObject);
         CardSelectItems.Clear();
         selected.Clear();
+        selectedItems.Clear();
         CardSelectItem = null;
         SelectButton.interactable = false;
     }
 
-    public void ItemSelected(int tempID)
+    public void ItemSelected(int tempID, CardSelectItemBehavior item)
     {
         selected.Add(tempID);
+        selectedItems.Add(item);
         if (selected.Count >= minSelect)
             SelectButton.interactable = true;
+        if (selected.Count > maxSelect)
+        {
+            selected.RemoveAt(0);
+            selectedItems[0].Deselect();
+            selectedItems.RemoveAt(0);
+        }
+        NumberItems();
     }
 
     public void ItemDeselected(int tempID)
     {
         selected.Remove(tempID);
+        foreach (CardSelectItemBehavior item in selectedItems)
+        {
+            if (item.tempID == tempID)
+            {
+                selectedItems.Remove(item);
+                break;
+            }
+        }
         if (selected.Count < minSelect || selected.Count == 0)
             SelectButton.interactable = false;
+        NumberItems();
     }
 
     public bool CapacityMet()
@@ -105,5 +125,17 @@ public class CardSelect : MonoBehaviour
         if (selected.Count == maxSelect)
             return true;
         return false;
+    }
+
+    public void NumberItems()
+    {
+        foreach (CardSelectItemBehavior item in selectedItems)
+        {
+            item.RemoveNumber();
+        }
+        for (int i = 0; i < selectedItems.Count; i++)
+        {
+            selectedItems[i].GiveNumber(i + 1);
+        }
     }
 }

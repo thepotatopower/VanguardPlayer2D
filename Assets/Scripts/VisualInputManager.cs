@@ -233,6 +233,22 @@ public class VisualInputManager : NetworkBehaviour
             oSignalEvent.Set();
         }
 
+        protected override void ChooseOrder_Input()
+        {
+            _query = "Choose order for cards.";
+            int_value = cardsToSelect.Count;
+            int_value2 = cardsToSelect.Count;
+            SelectFromList_Input();
+        }
+
+        protected override void DisplayCards_Input()
+        {
+            _query = "Press Cancel to finish looking.";
+            int_value = 0;
+            int_value2 = 0;
+            SelectFromList_Input();
+        }
+
         protected override void SelectRidePhaseAction_Input()
         {
             inputManager.cardIDs.Clear();
@@ -886,10 +902,10 @@ public class VisualInputManager : NetworkBehaviour
                 cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], strings[i]);
             }
             int selection = -1;
-            waitForButton = new WaitForUIButtons(cardSelect.SelectButton);
+            waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == cardSelect.SelectButton)
+                if (waitForButton.PressedButton == cardSelect.SelectButton || waitForButton.PressedButton == cardSelect.CancelButton) 
                     selection = 0;
                 yield return null;
             }
