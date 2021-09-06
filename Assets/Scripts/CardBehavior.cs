@@ -121,8 +121,9 @@ public class CardBehavior : MonoBehaviour
         }
         else
         {
-            if (originalPosition != null)
-                direction = originalPosition.y;
+            //if (originalPosition != null)
+            //    direction = originalPosition.y;
+            direction = PlayerHand.transform.position.y;
         }
         Vector3 newPosition = new Vector3(this.transform.position.x, direction, 0);
         float step = 150 * Time.deltaTime;
@@ -146,8 +147,19 @@ public class CardBehavior : MonoBehaviour
         selectedCard = GameObject.Instantiate(selectedCardPrefab);
         Debug.Log("instantiated");
         selectedCard.transform.position = this.transform.position;
-        selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
-        selectedCard.transform.SetSiblingIndex(PlayerHand.transform.GetSiblingIndex() - 1);
+        if (this.transform.parent.gameObject.name == "Field")
+        {
+            selectedCard.transform.SetParent(this.transform.parent);
+            selectedCard.transform.SetSiblingIndex(this.transform.GetSiblingIndex() - 1);
+        }
+        else
+        {
+            if (this.transform.parent.parent != null)
+                selectedCard.transform.SetParent(this.transform.parent.parent);
+            else
+                selectedCard.transform.SetParent(GameObject.Find("MainCanvas").transform);
+            selectedCard.transform.SetSiblingIndex(this.transform.parent.GetSiblingIndex() - 1);
+        }
         selectedCard.transform.GetComponent<Image>().color = Color.cyan;
         selectable = true;
     }

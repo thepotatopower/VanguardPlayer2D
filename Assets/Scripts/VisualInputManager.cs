@@ -395,6 +395,23 @@ public class VisualInputManager : NetworkBehaviour
             oSignalEvent.Set();
         }
 
+        protected override void SelectCardToGuard_Input()
+        {
+            inputManager.cardIDs.Clear();
+            inputManager.tempIDs.Clear();
+            inputManager.bool1 = false;
+            inputManager.query = "Choose unit to guard.";
+            foreach (Card card in _player1.GetAttackedCards())
+            {
+                inputManager.cardIDs.Add(card.id);
+                inputManager.tempIDs.Add(card.tempID);
+            }
+            Thread.Sleep(250);
+            inputManager.inputSignal = InputType.SelectActiveUnit;
+            WaitForReadyToContinue();
+            oSignalEvent.Set();
+        }
+
         protected override void SelectAbility_Input()
         {
             Thread.Sleep(250);
