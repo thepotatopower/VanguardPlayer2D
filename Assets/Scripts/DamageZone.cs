@@ -46,4 +46,14 @@ public class DamageZone : MonoBehaviour
         Debug.Log("damage could not find card: " + tempID);
         return null;
     }
+
+    public bool ContainsCard(int tempID)
+    {
+        for (int i = 0; i < this.transform.childCount; i++)
+        {
+            if (this.transform.GetChild(i).name == tempID.ToString())
+                return true;
+        }
+        return false;
+    }
 }

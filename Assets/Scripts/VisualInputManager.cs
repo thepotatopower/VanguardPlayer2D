@@ -551,6 +551,7 @@ public class VisualInputManager : NetworkBehaviour
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
         {
             receivedInput = true;
+            Debug.Log("new input signal: " + inputSignal);
             if (inputSignal == InputType.Reset)
                 StartCoroutine(ResetInputs());
             else
@@ -916,7 +917,12 @@ public class VisualInputManager : NetworkBehaviour
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], strings[i]);
+                if (UnitSlots.GetComponent<UnitSlots>().IsUnit(tempIDs[i]))
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], strings[i]);
+                else if (Globals.Instance.playerDamageZone.GetComponent<DamageZone>().ContainsCard(tempIDs[i]))
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, faceup[i], true, strings[i]);
+                else
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, strings[i]);
             }
             int selection = -1;
             waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
@@ -1303,6 +1309,8 @@ public class VisualInputManager : NetworkBehaviour
             selectionButton2.GetComponentInChildren<Text>().text = "End Guard";
             if (!bool1)
                 selectionButton1.interactable = false;
+            else
+                selectionButton1.interactable = true;
             waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2, cardButton, cardButton2);
             while (selection < 0)
             {

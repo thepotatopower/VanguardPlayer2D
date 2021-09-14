@@ -266,18 +266,21 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with currentlocation");
             return;
         }
-        RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card, grade, soul, critical, faceup, upright);
+        RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card.id, e.card.tempID, e.card.originalOwner, grade, soul, critical, faceup, upright);
     }
 
     [ClientRpc]
-    public void RpcChangeZone(int previousLocation, int previousFL, int currentLocation, int currentFL, Card card, int grade, int soul, int critical, bool faceup, bool upright)
+    public void RpcChangeZone(int previousLocation, int previousFL, int currentLocation, int currentFL, string cardID, int tempID, int originalOwner, int grade, int soul, int critical, bool faceup, bool upright)
     {
-        animations.Add(ChangeZoneRoutine(previousLocation, previousFL, currentLocation, currentFL, card, grade, soul, critical, faceup, upright));
+        animations.Add(ChangeZoneRoutine(previousLocation, previousFL, currentLocation, currentFL, cardID, tempID, originalOwner, grade, soul, critical, faceup, upright));
     }
 
-    IEnumerator ChangeZoneRoutine(int previousLocation, int previousFL, int currentLocation, int currentFL, Card card, int grade, int soul, int critical, bool faceup, bool upright)
+    IEnumerator ChangeZoneRoutine(int previousLocation, int previousFL, int currentLocation, int currentFL, string cardID, int tempID, int originalOwner, int grade, int soul, int critical, bool faceup, bool upright)
     {
         Debug.Log("changing zone");
+        Card card = LookUpCard(cardID);
+        card.tempID = tempID;
+        card.originalOwner = originalOwner;
         inAnimation = true;
         PlayerHand.GetComponent<Hand>().Reset();
         GameObject previousZone = null;
@@ -1048,6 +1051,11 @@ public class CardFightManager : NetworkBehaviour
     {
         Debug.Log("rotating");
         Player player = sender as Player;
+        if (e == null)
+        {
+            Debug.Log("error with cardeventargs");
+            return;
+        }
         RpcChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
     }
 
@@ -1300,6 +1308,11 @@ public class CardFightManager : NetworkBehaviour
     [ClientRpc]
     public void RpcPerformChosen(string cardID, int tempID)
     {
+        if (cardID == null)
+        {
+            Debug.Log("error with cardID");
+            return;
+        }
         animations.Add(Flash(cardID, tempID));
     }
 
@@ -1325,7 +1338,7 @@ public class CardFightManager : NetworkBehaviour
     {
         List<Card> card;
         List<string> _cardID;
-        Debug.Log("looking up " + cardID + "...");
+        //Debug.Log("looking up " + cardID + "...");
         if (cardDict.ContainsKey(cardID))
             return cardDict[cardID];
         else

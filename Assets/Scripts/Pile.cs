@@ -18,7 +18,14 @@ public class Pile : NetworkBehaviour
 
     private void Start()
     {
-        topCard.GetComponent<Image>().enabled = false;
+        topCard = GameObject.Instantiate(Globals.Instance.cardPrefab).GetComponent<CardBehavior>();
+        topCard.transform.parent = this.transform;
+        topCard.transform.localPosition = Vector2.zero;
+        if (this.name.Contains("Enemy"))
+            topCard.transform.Rotate(0, 0, 180);
+        topCard.transform.SetAsFirstSibling();
+        if (addToTop)
+            topCard.GetComponent<Image>().enabled = false;
         topCard.cardID = "";
     }
 

@@ -429,15 +429,15 @@ public class DeckBuilderManager : MonoBehaviour
         else
             filename = "testDeck";
         StreamWriter file = new StreamWriter("C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/" + filename + ".txt");
-        file.WriteLine("#RideDeck");
+        file.Write("#RideDeck");
         foreach (Card card in rideDeck)
         {
-            file.WriteLine(card.id);
+            file.Write("\n" + card.id);
         }
-        file.WriteLine("#MainDeck");
+        file.Write("\n#MainDeck");
         foreach (Card card in mainDeck)
         {
-            file.WriteLine(card.id);
+            file.Write("\n" + card.id);
         }
         file.Close();
     }
