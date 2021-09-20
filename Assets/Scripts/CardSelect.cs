@@ -43,6 +43,9 @@ public class CardSelect : MonoBehaviour
         maxSelect = max;
         if (minSelect == 0)
             CancelButton.interactable = true;
+        else
+            CancelButton.interactable = false;
+        SelectButton.interactable = false;
     }
 
     public void AddCardSelectItem(int tempID, string cardID, string cardName, bool faceup, bool upright, string location)
@@ -85,6 +88,8 @@ public class CardSelect : MonoBehaviour
         CardSelectItems.Clear();
         selected.Clear();
         selectedItems.Clear();
+        minSelect = 0;
+        maxSelect = 0;
         CardSelectItem = null;
         SelectButton.interactable = false;
     }

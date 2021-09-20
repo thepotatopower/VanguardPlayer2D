@@ -56,6 +56,7 @@ public class Pile : NetworkBehaviour
     public void AddCard(Card card)
     {
         pile.Insert(0, card);
+        Debug.Log(card.tempID + " added to " + this.name);
         UpdateCount(1);
         topCard.GetComponent<Image>().enabled = true;
         topCard.cardID = card.id;

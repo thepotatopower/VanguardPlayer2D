@@ -37,6 +37,7 @@ public class CardFightManager : NetworkBehaviour
     public string SQLpath;
     public bool inAnimation = false;
     public List<IEnumerator> animations = new List<IEnumerator>();
+    public List<IEnumerator> RpcCalls = new List<IEnumerator>();
 
     [SyncVar]
     public int counter;
@@ -77,11 +78,12 @@ public class CardFightManager : NetworkBehaviour
         cardPrefab = playerManager.cardPrefab;
         SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;";
         StartCoroutine(AnimateAnimations());
+        StartCoroutine(ProcessRpcCalls());
         string deckPath = GameObject.Find("InputField").GetComponent<InputField>().text;
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/overlord.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/bastion.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -115,6 +117,20 @@ public class CardFightManager : NetworkBehaviour
                 }
                 animations.RemoveAt(0);
                 inputManager.cardsAreHoverable = true;
+            }
+            yield return null;
+        }
+    }
+
+    IEnumerator ProcessRpcCalls()
+    {
+        while (true)
+        {
+            if (RpcCalls.Count > 0)
+            {
+                IEnumerator NextCall = RpcCalls[0];
+                RpcCalls.RemoveAt(0);
+                StartCoroutine(NextCall);
             }
             yield return null;
         }
@@ -266,7 +282,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with currentlocation");
             return;
         }
-        RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card.id, e.card.tempID, e.card.originalOwner, grade, soul, critical, faceup, upright);
+        IEnumerator Dialog()
+        {
+            RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card.id, e.card.tempID, e.card.originalOwner, grade, soul, critical, faceup, upright);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -278,7 +299,7 @@ public class CardFightManager : NetworkBehaviour
     IEnumerator ChangeZoneRoutine(int previousLocation, int previousFL, int currentLocation, int currentFL, string cardID, int tempID, int originalOwner, int grade, int soul, int critical, bool faceup, bool upright)
     {
         Debug.Log("changing zone");
-        Card card = LookUpCard(cardID);
+        Card card = LookUpCard(cardID).Clone();
         card.tempID = tempID;
         card.originalOwner = originalOwner;
         inAnimation = true;
@@ -710,7 +731,12 @@ public class CardFightManager : NetworkBehaviour
         }
         if (e.previousLocation.Item2 == e.currentLocation.Item2)
             return;
-        RpcSwapZone(e.previousLocation.Item2, e.currentLocation.Item2);
+        IEnumerator Dialog()
+        {
+            RpcSwapZone(e.previousLocation.Item2, e.currentLocation.Item2);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -754,7 +780,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void ShowAbilityActivated(object sender, CardEventArgs e)
     {
-        RpcShowAbilityActivated(e.card);
+        IEnumerator Dialog()
+        {
+            RpcShowAbilityActivated(e.card);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -871,7 +902,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformStandUpVanguard(object sender, CardEventArgs e)
     {
-        RpcStandUpVanguard();
+        IEnumerator Dialog()
+        {
+            RpcStandUpVanguard();
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -898,7 +934,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
-        RpcChangePhase(Phase.Draw, cardFight.actingPlayer._playerID, cardFight._turn);
+        IEnumerator Dialog()
+        {
+            RpcChangePhase(Phase.Draw, cardFight.actingPlayer._playerID, cardFight._turn);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     public void PerformStandPhase(object sender, CardEventArgs e)
@@ -909,7 +950,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
-        RpcChangePhase(Phase.Stand, cardFight.actingPlayer._playerID, cardFight._turn);
+        IEnumerator Dialog()
+        {
+            RpcChangePhase(Phase.Stand, cardFight.actingPlayer._playerID, cardFight._turn);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     public void PerformRidePhase(object sender, CardEventArgs e)
@@ -924,7 +970,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("my turn");
         else
             Debug.Log("their turn");
-        RpcChangePhase(Phase.Ride, cardFight.actingPlayer._playerID, cardFight._turn);
+        IEnumerator Dialog()
+        {
+            RpcChangePhase(Phase.Ride, cardFight.actingPlayer._playerID, cardFight._turn);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     public void PerformMainPhase(object sender, CardEventArgs e)
@@ -935,7 +986,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
-        RpcChangePhase(Phase.Main, cardFight.actingPlayer._playerID, cardFight._turn); 
+        IEnumerator Dialog()
+        {
+            RpcChangePhase(Phase.Main, cardFight.actingPlayer._playerID, cardFight._turn);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     public void PerformBattlePhase(object sender, CardEventArgs e)
@@ -946,7 +1002,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
-        RpcChangePhase(Phase.Battle, cardFight.actingPlayer._playerID, cardFight._turn);
+        IEnumerator Dialog()
+        {
+            RpcChangePhase(Phase.Battle, cardFight.actingPlayer._playerID, cardFight._turn);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -977,7 +1038,12 @@ public class CardFightManager : NetworkBehaviour
             booster = player.GetCircle(player.Booster());
         foreach (Card card in player.GetAttackedCards())
         {
-            RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(card), booster);
+            IEnumerator Dialog()
+            {
+                RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(card), booster);
+                yield return null;
+            }
+            RpcCalls.Add(Dialog());
         }
     }
 
@@ -1056,7 +1122,12 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with cardeventargs");
             return;
         }
-        RpcChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
+        IEnumerator Dialog()
+        {
+            RpcChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1083,7 +1154,12 @@ public class CardFightManager : NetworkBehaviour
     {
         Debug.Log("flipping");
         Player player = sender as Player;
-        RpcChangeFaceUp(e.i, e.faceup);
+        IEnumerator Dialog()
+        {
+            RpcChangeFaceUp(e.i, e.faceup);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1115,7 +1191,12 @@ public class CardFightManager : NetworkBehaviour
     {
         Player player = sender as Player;
         Debug.Log("updating shield value: " + e.currentShield);
-        RpcChangeShieldValue(e.circle, e.currentShield);
+        IEnumerator Dialog()
+        {
+            RpcChangeShieldValue(e.circle, e.currentShield);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1141,7 +1222,14 @@ public class CardFightManager : NetworkBehaviour
         if (e == null)
             Debug.Log("error with CardEventArgs");
         else
-            RpcChangeCardValue(e.circle, e.currentPower, e.currentCritical);
+        {
+            IEnumerator Dialog()
+            {
+                RpcChangeCardValue(e.circle, e.currentPower, e.currentCritical);
+                yield return null;
+            }
+            RpcCalls.Add(Dialog());
+        }
     }
 
     [ClientRpc]
@@ -1163,7 +1251,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void CheckIfAttackHits(object sender, CardEventArgs e)
     {
-        RpcCheckIfAttackHits();
+        IEnumerator Dialog()
+        {
+            RpcCheckIfAttackHits();
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1183,7 +1276,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformReveal(object sender, CardEventArgs e)
     {
-        RpcPerformReveal(e.card, e.currentLocation.Item1);
+        IEnumerator Dialog()
+        {
+            RpcPerformReveal(e.card, e.currentLocation.Item1);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1242,7 +1340,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformSetPrison(object sender, CardEventArgs e)
     {
-        RpcSetPrison(e.playerID);
+        IEnumerator Dialog()
+        {
+            RpcSetPrison(e.playerID);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1262,7 +1365,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformImprison(object sender, CardEventArgs e)
     {
-        RpcPerformImprison(e.playerID);
+        IEnumerator Dialog()
+        {
+            RpcPerformImprison(e.playerID);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1282,7 +1390,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformFree(object sender, CardEventArgs e)
     {
-        RpcPerformFree(e.playerID);
+        IEnumerator Dialog()
+        {
+            RpcPerformFree(e.playerID);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1302,7 +1415,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void PerformChosen(object sender, CardEventArgs e)
     {
-        RpcPerformChosen(e.card.id, e.card.tempID);
+        IEnumerator Dialog()
+        {
+            RpcPerformChosen(e.card.id, e.card.tempID);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1313,6 +1431,7 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with cardID");
             return;
         }
+        Debug.Log(tempID + " chosen");
         animations.Add(Flash(cardID, tempID));
     }
 

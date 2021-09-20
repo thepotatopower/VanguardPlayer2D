@@ -54,7 +54,7 @@ public class VisualInputManager : NetworkBehaviour
     public int player1_input = -1;
     [SyncVar]
     public int player2_input = -1;
-    [SyncVar]
+    //[SyncVar(hook = nameof(OnInputSignalChanged))]
     public int inputSignal = -1;
     [SyncVar]
     public int numResponses = 0;
@@ -66,7 +66,6 @@ public class VisualInputManager : NetworkBehaviour
     public int input3 = -1;
     [SyncVar]
     public bool readyToContinue = false;
-    [SyncVar]
     public bool reversed = false;
     [SyncVar]
     public int min = 0;
@@ -117,13 +116,15 @@ public class VisualInputManager : NetworkBehaviour
     public class IM : InputManager
     {
         public VisualInputManager inputManager;
-
+        public int inputSignal = 0;
+        public bool inputActive = false;
+        public bool reversed = false;
         public override void SwapPlayers()
         {
-            if (inputManager.reversed)
-                inputManager.reversed = false;
+            if (reversed)
+                reversed = false;
             else
-                inputManager.reversed = true;
+                reversed = true;
             Debug.Log("swapped");
             base.SwapPlayers();
         }
@@ -135,14 +136,14 @@ public class VisualInputManager : NetworkBehaviour
             {
                 int_input = inputManager.player2_input;
                 Debug.Log("second RPS input: " + int_input.ToString());
-                inputManager.inputSignal = InputType.ResolveRPS;
+                inputSignal = InputType.ResolveRPS;
                 while (!inputManager.readyToContinue) ;
                 inputManager.readyToContinue = false;
                 oSignalEvent.Set();
             }
             else
             {
-                inputManager.inputSignal = InputType.RPS;
+                inputSignal = InputType.RPS;
                 Debug.Log(inputManager.readyToContinue);
                 while (!inputManager.readyToContinue) ;
                 inputManager.readyToContinue = false;
@@ -155,7 +156,9 @@ public class VisualInputManager : NetworkBehaviour
         protected override void YesNo_Input()
         {
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.YesNo;
+            while (inputActive) ;
+            inputActive = true;
+            inputSignal = InputType.YesNo;
             inputManager.query = string_input;
             if (string_input == "Boost?")
                 inputManager.int1 = _player1.GetBooster(_player1.GetAttacker().tempID);
@@ -166,31 +169,36 @@ public class VisualInputManager : NetworkBehaviour
             else
                 bool_input = false;
             Debug.Log("selection made: " + int_input);
-            inputManager.inputSignal = InputType.Reset;
+            inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
+            inputActive = false;
         }
 
         protected override void SelectCardsToMulligan_Input()
         {
             Thread.Sleep(250); //need to refine this later
+            while (inputActive) ;
+            inputActive = true;
             intlist_input.Clear();
-            inputManager.inputSignal = InputType.Mulligan;
+            inputSignal = InputType.Mulligan;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             foreach (int input in inputManager.inputs)
                 intlist_input.Add(input);
             inputManager.inputs.Clear();
-            inputManager.inputSignal = InputType.Reset;
+            inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectFromList_Input()
         {
             Thread.Sleep(250);
             string location;
+            while (inputActive) ;
+            inputActive = true;
             inputManager.count = int_value;
             inputManager.min = int_value2;
             inputManager.query = _query;
@@ -228,29 +236,37 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.faceup.Add(_player1.IsFaceUp(card));
                 inputManager.upright.Add(_player1.IsUpRight(card));
             }
-            inputManager.inputSignal = InputType.SelectFromList;
+            inputSignal = InputType.SelectFromList;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void ChooseOrder_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             _query = "Choose order for cards.";
             int_value = cardsToSelect.Count;
             int_value2 = cardsToSelect.Count;
+            inputActive = false;
             SelectFromList_Input();
         }
 
         protected override void DisplayCards_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             _query = "Press Cancel to finish looking.";
             int_value = 0;
             int_value2 = 0;
+            inputActive = false;
             SelectFromList_Input();
         }
 
         protected override void SelectRidePhaseAction_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
@@ -265,13 +281,15 @@ public class VisualInputManager : NetworkBehaviour
             if (_player1.CanRideFromRideDeck())
                 inputManager.bool1 = true;
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectRidePhaseAction;
+            inputSignal = InputType.SelectRidePhaseAction;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectMainPhaseAction_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.cardIDs2.Clear();
             inputManager.tempIDs.Clear();
@@ -292,29 +310,34 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.tempIDs2.Add(ability.GetCard().tempID);
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectMainPhaseAction;
+            inputSignal = InputType.SelectMainPhaseAction;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectCallLocation_Input()
         {
             Thread.Sleep(250);
+            while (inputActive) ;
+            inputActive = true;
             bool proceed = false;
             while (!proceed)
             {
                 inputManager.string1 = card_input.id;
-                inputManager.inputSignal = InputType.SelectCallLocation;
+                inputSignal = InputType.SelectCallLocation;
                 WaitForReadyToContinue();
                 if (!_ints.Contains(int_input) && ((_ints2.Count > 0 && _ints2.Contains(int_input)) || _ints2.Count == 0))
                 {
                     proceed = true;
                 }
             }
+            inputActive = false;
         }
 
         protected override void SelectBattlePhaseAction_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
@@ -327,13 +350,15 @@ public class VisualInputManager : NetworkBehaviour
                 }
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectBattlePhaseAction;
+            inputSignal = InputType.SelectBattlePhaseAction;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectUnitToAttack_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
@@ -343,13 +368,15 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectUnitToAttack;
+            inputSignal = InputType.SelectUnitToAttack;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectGuardPhaseAction_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             if (_player1.CanGuard())
                 inputManager.bool1 = true;
             else
@@ -369,12 +396,15 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.tempIDs2.Add(ability.GetCard().tempID);
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectGuardStepAction;
+            inputSignal = InputType.SelectGuardStepAction;
             WaitForReadyToContinue();
+            inputActive = false;
         }
 
         protected override void SelectActiveUnit_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
@@ -390,13 +420,15 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectActiveUnit;
+            inputSignal = InputType.SelectActiveUnit;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectCardToGuard_Input()
         {
+            while (inputActive) ;
+            inputActive = true;
             inputManager.cardIDs.Clear();
             inputManager.tempIDs.Clear();
             inputManager.bool1 = false;
@@ -407,15 +439,17 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputManager.inputSignal = InputType.SelectActiveUnit;
+            inputSignal = InputType.SelectActiveUnit;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectAbility_Input()
         {
             Thread.Sleep(250);
             string location;
+            while (inputActive) ;
+            inputActive = true;
             inputManager.count = int_value;
             inputManager.min = int_value2;
             inputManager.query = _query;
@@ -453,22 +487,24 @@ public class VisualInputManager : NetworkBehaviour
                 inputManager.bool1 = true;
             else
                 inputManager.bool1 = false;
-            inputManager.inputSignal = InputType.SelectAbility;
+            inputSignal = InputType.SelectAbility;
             WaitForReadyToContinue();
-            oSignalEvent.Set();
+            inputActive = false;
         }
 
         protected override void SelectOption_Input()
         {
             Thread.Sleep(250);
+            while (inputActive) ;
+            inputActive = true;
             inputManager.strings.Clear();
             foreach (string option in _list)
             {
                 inputManager.strings.Add(option);
             }
-            inputManager.inputSignal = InputType.SelectOption;
+            inputSignal = InputType.SelectOption;
             WaitForReadyToContinue();
-            intlist_input.Clear();
+            inputActive = false;
         }
 
         public void WaitForReadyToContinue()
@@ -482,7 +518,8 @@ public class VisualInputManager : NetworkBehaviour
             int_input = inputManager.input1;
             int_input2 = inputManager.input2;
             inputManager.inputs.Clear();
-            inputManager.inputSignal = InputType.Reset;
+            Thread.Sleep(30 / 1000);
+            inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
         }
@@ -548,10 +585,21 @@ public class VisualInputManager : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (isServer && Thread.CurrentThread == currentThread && inputManager != null && reversed != inputManager.reversed)
+        {
+            bool newReversed = inputManager.reversed;
+            reversed = newReversed;
+            RpcUpdateReversed(newReversed);
+        }
+        if (isServer && Thread.CurrentThread == currentThread && inputManager != null && inputManager.inputSignal > 0)
+        {
+            int newSignal = inputManager.inputSignal;
+            inputManager.inputSignal = 0;
+            RpcUpdateInputSignal(newSignal);
+        }
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
         {
             receivedInput = true;
-            Debug.Log("new input signal: " + inputSignal);
             if (inputSignal == InputType.Reset)
                 StartCoroutine(ResetInputs());
             else
@@ -641,6 +689,24 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
+    [ClientRpc]
+    public void RpcUpdateInputSignal(int newInputSignal)
+    {
+        inputSignal = newInputSignal;
+    }
+
+    [ClientRpc]
+    public void RpcUpdateReversed(bool newReversed)
+    {
+        reversed = newReversed;
+    }
+
+    public void OnInputSignalChanged(int oldInputSignal, int newInputSignal)
+    {
+        Debug.Log("old input signal: " + oldInputSignal);
+        Debug.Log("new input signal: " + newInputSignal);
+    }
+
     public bool isActingPlayer()
     {
         if (isServer)
@@ -702,11 +768,13 @@ public class VisualInputManager : NetworkBehaviour
         PlayerHand.GetComponent<Hand>().Reset();
         if (isServer)
         {
+            yield return null;
             Debug.Log("host resetting");
             playerManager.CmdChangeInput(1, -1);
         }
         else
         {
+            yield return null;
             Debug.Log("remote resetting");
             playerManager.CmdChangeInput(2, -1);
         }
@@ -914,6 +982,8 @@ public class VisualInputManager : NetworkBehaviour
         {
             cardSelect.Show();
             cardSelect.Initialize(query, min, count);
+            Debug.Log("tempIDs Count: " + tempIDs.Count);
+            Debug.Log("cardIDs Count: " + cardIDs.Count);
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
@@ -961,6 +1031,8 @@ public class VisualInputManager : NetworkBehaviour
                 cardSelect.Initialize("Select ability to activate.", 1, 1);
             else
                 cardSelect.Initialize("Select ability to activate.", 0, 1);
+            Debug.Log("tempIDs Count: " + tempIDs.Count);
+            Debug.Log("cardIDs Count: " + cardIDs.Count);
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
@@ -1074,10 +1146,12 @@ public class VisualInputManager : NetworkBehaviour
             miscellaneousButtons.Clear();
             miscellaneousButtons.Add(cardButton);
             Debug.Log("turn: " + int1);
-            if (int1 > 1)
-                PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = true;
-            else
+            PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = true;
+            if (int1 <= 1)
+            {
                 PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = true;
+                PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = false;
+            }
             waitForButton = new WaitForUIButtons(cardButton, cardButton2, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton,
                 Globals.Instance.soulCharge, Globals.Instance.counterCharge, Globals.Instance.damage, Globals.Instance.heal);
             while (selection < 0)
@@ -1466,11 +1540,28 @@ public class VisualInputManager : NetworkBehaviour
 
     public void ResetReceive()
     {
-        inputSignal = 0;
-        receivedInput = false;
-        Debug.Log("changed to false");
         IEnumerator Dialog()
         {
+            //if (isServer)
+            //{
+            //    yield return null;
+            //    inputSignal = 0;
+            //    yield return null;
+            //    receivedInput = false;
+            //}
+            //else
+            //{
+            //    Debug.Log("waiting for inputSignal to reset");
+            //    while (inputSignal != 0)
+            //    {
+            //        //Debug.Log("waiting for inputSignal to reset");
+            //        yield return null;
+            //    }
+            //    receivedInput = false;
+            //}
+            inputSignal = 0;
+            receivedInput = false;
+            Debug.Log("changed to false");
             while (!NetworkClient.ready)
             {
                 Debug.Log("not ready");
@@ -1478,6 +1569,7 @@ public class VisualInputManager : NetworkBehaviour
             }
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
+            Debug.Log("starting CmdReady");
             playerManager.CmdReady();
         }
         StartCoroutine(Dialog());
@@ -1542,7 +1634,7 @@ public class VisualInputManager : NetworkBehaviour
             cardViewer.Initialize("Player Drop Zone", 0, 0);
             foreach (Card card in pile.pile)
             {
-                cardViewer.AddCardSelectItem(-1, card.id, card.name, true, true, "");
+                cardViewer.AddCardSelectItem(card.tempID, card.id, card.name, true, true, "");
             }
         }
         else if (selectedGameObject.GetComponent<UnitSlotBehavior>() != null)
@@ -1551,7 +1643,7 @@ public class VisualInputManager : NetworkBehaviour
             cardViewer.Initialize("Soul", 0, 0);
             foreach (Card card in selectedGameObject.GetComponent<UnitSlotBehavior>()._soul)
             {
-                cardViewer.AddCardSelectItem(-1, card.id, card.name, true, true, "");
+                cardViewer.AddCardSelectItem(card.tempID, card.id, card.name, true, true, "");
             }
         }
         selectedGameObject = null;

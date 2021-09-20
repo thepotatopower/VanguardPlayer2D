@@ -29,6 +29,7 @@ public class Hand : MonoBehaviour
 
     public void Reset()
     {
+        Debug.Log("resetting hand");
         for (int i = 0; i < hand.transform.childCount; i++)
         {
             hand.transform.GetChild(i).GetComponent<CardBehavior>().Reset();
