@@ -83,7 +83,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/bastion.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/magnolia.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -130,7 +130,8 @@ public class CardFightManager : NetworkBehaviour
             {
                 IEnumerator NextCall = RpcCalls[0];
                 RpcCalls.RemoveAt(0);
-                StartCoroutine(NextCall);
+                if (NextCall != null)
+                    StartCoroutine(NextCall);
             }
             yield return null;
         }
@@ -229,6 +230,8 @@ public class CardFightManager : NetworkBehaviour
         EnemyDropZone.GetComponent<Pile>().InitializeCount(0);
         Globals.Instance.playerOrderZone.GetComponent<Pile>().InitializeCount(0);
         Globals.Instance.enemyOrderZone.GetComponent<Pile>().InitializeCount(0);
+        Globals.Instance.playerBindZone.GetComponent<Pile>().InitializeCount(0);
+        Globals.Instance.enemyBindZone.GetComponent<Pile>().InitializeCount(0);
     }
 
     [ClientRpc]
@@ -444,6 +447,14 @@ public class CardFightManager : NetworkBehaviour
                     else
                         zone = Globals.Instance.enemyOrderZone.gameObject;
                 }
+            }
+            else if (location == Location.Bind)
+            {
+                Debug.Log("bind zone here");
+                if (isPlayerAction(card.originalOwner))
+                    zone = Globals.Instance.playerBindZone.gameObject;
+                else
+                    zone = Globals.Instance.enemyBindZone.gameObject;
             }
             else if (location == -1)
             {
@@ -1050,7 +1061,6 @@ public class CardFightManager : NetworkBehaviour
     [ClientRpc]
     public void RpcPerformAttack(int attackingCircle, int attackedCircle, int booster)
     {
-        _attacked.Clear();
         _attacker = attackingCircle;
         _attacked.Add(attackedCircle);
         _booster = booster;
@@ -1268,6 +1278,7 @@ public class CardFightManager : NetworkBehaviour
     IEnumerator CheckIfAttackHitsAnimation()
     {
         UnitSlots.GetComponent<UnitSlots>().EndAttack();
+        _attacked.Clear();
         POW.GetComponent<POWSLD>().Reset();
         SLD.GetComponent<POWSLD>().Reset();
         inAnimation = false;

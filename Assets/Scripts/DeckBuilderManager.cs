@@ -136,6 +136,7 @@ public class DeckBuilderManager : MonoBehaviour
                 query += " AND";
             query += " name LIKE '%" + NameInput.text + "%'";
         }
+        query += " ORDER BY name";
         Debug.Log(query);
         List<Card> cards = LoadCards.Search(query, SQLpath);
         while (CardSearchContent.transform.childCount > 0)

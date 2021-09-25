@@ -11,6 +11,7 @@ public class POWSLD : MonoBehaviour
     public bool compare = false;
     public bool isPOW = true;
     public bool auto = false;
+    public int currentIndex = -1;
 
     // Start is called before the first frame update
 
@@ -40,8 +41,10 @@ public class POWSLD : MonoBehaviour
             {
                 if (Globals.Instance.cardFightManager._attacked.Count > 0)
                 {
+                    if (currentIndex < 0)
+                        currentIndex = 0;
                     this.transform.localPosition = Globals.Instance.SLDPosition;
-                    _count = Globals.Instance.unitSlots.GetUnitSlot(Globals.Instance.cardFightManager._attacked[0]).GetComponent<UnitSlotBehavior>()._shield;
+                    _count = Globals.Instance.unitSlots.GetUnitSlot(Globals.Instance.cardFightManager._attacked[currentIndex]).GetComponent<UnitSlotBehavior>()._shield;
                 }
                 else
                     this.transform.localPosition = Globals.Instance.ResetPosition;
@@ -109,5 +112,6 @@ public class POWSLD : MonoBehaviour
         compare = false;
         auto = false;
         this.transform.localPosition = Globals.Instance.ResetPosition;
+        currentIndex = -1;
     }
 }

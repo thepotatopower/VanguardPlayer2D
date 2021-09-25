@@ -12,6 +12,7 @@ public class Pile : NetworkBehaviour
     public List<Card> pile = new List<Card>();
     public CardBehavior topCard;
     public bool addToTop = false;
+    public bool selectable = false;
     int _count = 0;
 
     // Update is called once per frame
@@ -111,5 +112,17 @@ public class Pile : NetworkBehaviour
                 return true;
         }
         return false;
+    }
+
+    public void MarkAsSelectable()
+    {
+        topCard.MarkAsSelectable();
+        selectable = true;
+    }
+
+    public void UnMarkAsSelectable()
+    {
+        topCard.Reset();
+        selectable = false;
     }
 }

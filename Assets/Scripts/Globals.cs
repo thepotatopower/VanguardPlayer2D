@@ -20,6 +20,10 @@ public class Globals : MonoBehaviour
     public GameObject ZoomIn;
     public Pile playerOrderZone;
     public Pile enemyOrderZone;
+    public Pile playerBindZone;
+    public Pile enemyBindZone;
+    public Pile playerDropZone;
+    public Pile enemyDropZone;
     public MiscStats playerMiscStats;
     public MiscStats enemyMiscStats;
     public Button selectionButton1;
@@ -29,6 +33,8 @@ public class Globals : MonoBehaviour
     public Button damage;
     public Button heal;
     public CardBehavior callCard;
+    public POWSLD POW;
+    public POWSLD SLD;
     public Vector2 ResetPosition;
     public Vector2 POWPosition;
     public Vector2 SLDPosition;

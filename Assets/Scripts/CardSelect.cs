@@ -38,7 +38,7 @@ public class CardSelect : MonoBehaviour
 
     public void Initialize(string prompt, int min, int max)
     {
-        CardSelectPrompt.GetComponent<Text>().text = prompt + " (min: " + min + ")"; 
+        CardSelectPrompt.GetComponent<Text>().text = prompt;
         minSelect = min;
         maxSelect = max;
         if (minSelect == 0)
@@ -48,7 +48,7 @@ public class CardSelect : MonoBehaviour
         SelectButton.interactable = false;
     }
 
-    public void AddCardSelectItem(int tempID, string cardID, string cardName, bool faceup, bool upright, string location)
+    public void AddCardSelectItem(int tempID, string cardID, string cardName, bool faceup, bool upright, bool mandatory, string location)
     {
         CardSelectItem = GameObject.Instantiate(CardSelectItemPrefab);
         //CardSelectItem.name = tempID.ToString();
@@ -67,6 +67,8 @@ public class CardSelect : MonoBehaviour
             CardSelectItem.transform.GetComponentInChildren<CardBehavior>().transform.Rotate(0, 0, -90);
         CardSelectItem.transform.GetChild(1).GetComponent<Text>().text = cardName;
         CardSelectItem.transform.GetChild(2).GetComponent<Text>().text = location;
+        if (mandatory)
+            CardSelectItem.transform.GetChild(5).GetComponent<Text>().enabled = true;
         CardSelectItem.GetComponent<CardSelectItemBehavior>().cardID = cardID;
         CardSelectItems.Add(CardSelectItem);
         CardSelectItem.transform.SetParent(content.transform);

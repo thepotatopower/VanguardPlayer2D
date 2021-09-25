@@ -183,6 +183,7 @@ public class UnitSlots : MonoBehaviour
         line.Points = points.ToArray();
         Debug.Log("number of positions: " + line.Points.Length);
         _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._shield = _unitSlots[attackedCircle].GetComponent<UnitSlotBehavior>()._power;
+        _unitSlots[attackedCircle].GetComponentInChildren<UnitSelectArea>().MarkWithColor(Color.red);
     }
 
     public void EndAttack()

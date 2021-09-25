@@ -17,6 +17,8 @@ public class UnitSelectArea : MonoBehaviour
             unitSlot.GetComponent<Image>().color = Color.green;
             if (unitSlot.unit != null && unitSlot._faceup)
                 GameObject.Find("CardFightManager").GetComponent<CardFightManager>().DisplayCard(unitSlot._cardID);
+            if (Globals.Instance.cardFightManager != null && Globals.Instance.cardFightManager._attacked.Contains(unitSlot._FL))
+                Globals.Instance.SLD.currentIndex = Globals.Instance.cardFightManager._attacked.IndexOf(unitSlot._FL);
         }
     }
 
@@ -54,6 +56,16 @@ public class UnitSelectArea : MonoBehaviour
             unitSlot.GetComponent<Image>().enabled = true;
             unitSlot.GetComponent<Image>().color = Color.cyan;
             isSelectable = true;
+        }
+    }
+
+    public void MarkWithColor(Color color)
+    {
+        if (this.transform.parent.TryGetComponent(out UnitSlotBehavior unitSlot))
+        {
+            noPointer = color;
+            unitSlot.GetComponent<Image>().enabled = true;
+            unitSlot.GetComponent<Image>().color = color;
         }
     }
 
