@@ -2986,6 +2986,8 @@ MonoBehaviour:
       m_Image: {fileID: 0}
     - m_Text: Brandt Gate
       m_Image: {fileID: 0}
+    - m_Text: Lyrical Monasterio
+      m_Image: {fileID: 0}
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []

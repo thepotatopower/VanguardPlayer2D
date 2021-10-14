@@ -66,7 +66,6 @@ public class VisualInputManager : NetworkBehaviour
     public int input3 = -1;
     [SyncVar]
     public bool readyToContinue = false;
-    public bool reversed = false;
     [SyncVar]
     public int min = 0;
     [SyncVar]
@@ -132,16 +131,6 @@ public class VisualInputManager : NetworkBehaviour
         public List<bool> _bools = new List<bool>();
         public string string_value;
 
-        public override void SwapPlayers()
-        {
-            if (reversed)
-                reversed = false;
-            else
-                reversed = true;
-            Debug.Log("swapped");
-            base.SwapPlayers();
-        }
-
         protected override void RPS_Input()
         {
             Debug.Log("RPS_Input started");
@@ -174,7 +163,7 @@ public class VisualInputManager : NetworkBehaviour
             inputSignal = InputType.YesNo;
             _query = string_input;
             if (string_input == "Boost?")
-                int_value = _player1.GetBooster(_player1.GetAttacker().tempID);
+                int_value = _actingPlayer.GetBooster(_actingPlayer.GetAttacker().tempID);
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             if (inputManager.player1_input == 0)
@@ -226,8 +215,8 @@ public class VisualInputManager : NetworkBehaviour
                 _tempIDs.Add(card.tempID);
                 _cardIDs.Add(card.id);
                 location = "<>";
-                //Debug.Log(_player1.GetLocation(card));
-                switch (_player1.GetLocation(card))
+                //Debug.Log(_actingPlayer.GetLocation(card));
+                switch (_actingPlayer.GetLocation(card))
                 {
                     case Location.RC:
                         location = "<RC>";
@@ -246,8 +235,8 @@ public class VisualInputManager : NetworkBehaviour
                         break;
                 }
                 _strings.Add(location);
-                _faceup.Add(_player1.IsFaceUp(card));
-                _upright.Add(_player1.IsUpRight(card));
+                _faceup.Add(_actingPlayer.IsFaceUp(card));
+                _upright.Add(_actingPlayer.IsUpRight(card));
             }
             inputSignal = InputType.SelectFromList;
             WaitForReadyToContinue();
@@ -283,15 +272,15 @@ public class VisualInputManager : NetworkBehaviour
             _cardIDs.Clear();
             _tempIDs.Clear();
             bool_value = false;
-            if (_player1.CanRideFromHand())
+            if (_actingPlayer.CanRideFromHand())
             {
-                foreach (Card card in _player1.GetRideableCards(false))
+                foreach (Card card in _actingPlayer.GetRideableCards(false))
                 {
                     _cardIDs.Add(card.id);
                     _tempIDs.Add(card.tempID);
                 }
             }
-            if (_player1.CanRideFromRideDeck())
+            if (_actingPlayer.CanRideFromRideDeck())
                 bool_value = true;
             Thread.Sleep(250);
             inputSignal = InputType.SelectRidePhaseAction;
@@ -308,10 +297,10 @@ public class VisualInputManager : NetworkBehaviour
             _tempIDs.Clear();
             _tempIDs2.Clear();
             bool_value = false;
-            int_value = _player1.Turn;
-            if (_player1.CanCallRearguard())
+            int_value = _actingPlayer.Turn;
+            if (_actingPlayer.CanCallRearguard())
             {
-                foreach (Card card in _player1.GetCallableRearguards())
+                foreach (Card card in _actingPlayer.GetCallableRearguards())
                 {
                     _cardIDs.Add(card.id);
                     _tempIDs.Add(card.tempID);
@@ -354,9 +343,9 @@ public class VisualInputManager : NetworkBehaviour
             _cardIDs.Clear();
             _tempIDs.Clear();
             bool_value = false;
-            if (_player1.CanAttack())
+            if (_actingPlayer.CanAttack())
             {
-                foreach (Card card in _player1.GetCardsToAttackWith())
+                foreach (Card card in _actingPlayer.GetCardsToAttackWith())
                 {
                     _cardIDs.Add(card.id);
                     _tempIDs.Add(card.tempID);
@@ -375,7 +364,7 @@ public class VisualInputManager : NetworkBehaviour
             _cardIDs.Clear();
             _tempIDs.Clear();
             bool_value = false;
-            foreach (Card card in _player1.GetPotentialAttackTargets())
+            foreach (Card card in _actingPlayer.GetPotentialAttackTargets())
             {
                 _cardIDs.Add(card.id);
                 _tempIDs.Add(card.tempID);
@@ -390,7 +379,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             while (inputActive) ;
             inputActive = true;
-            if (_player1.CanGuard())
+            if (_actingPlayer.CanGuard())
                 bool_value = true;
             else
                 bool_value = false;
@@ -398,7 +387,7 @@ public class VisualInputManager : NetworkBehaviour
             _tempIDs.Clear();
             _cardIDs2.Clear();
             _tempIDs2.Clear();
-            foreach (Card card in _player1.GetInterceptableCards())
+            foreach (Card card in _actingPlayer.GetInterceptableCards())
             {
                 _cardIDs.Add(card.id);
                 _tempIDs.Add(card.tempID);
@@ -427,7 +416,7 @@ public class VisualInputManager : NetworkBehaviour
                 _query += " critical.";
             else if (prompt == PromptType.AddPower)
                 _query += " power.";
-            foreach (Card card in _player1.GetActiveUnits())
+            foreach (Card card in _actingPlayer.GetActiveUnits())
             {
                 _cardIDs.Add(card.id);
                 _tempIDs.Add(card.tempID);
@@ -446,7 +435,7 @@ public class VisualInputManager : NetworkBehaviour
             _tempIDs.Clear();
             bool_value = false;
             _query = "Choose unit to guard.";
-            foreach (Card card in _player1.GetAttackedCards())
+            foreach (Card card in _actingPlayer.GetAttackedCards())
             {
                 _cardIDs.Add(card.id);
                 _tempIDs.Add(card.tempID);
@@ -475,8 +464,8 @@ public class VisualInputManager : NetworkBehaviour
                 _tempIDs.Add(ability.GetCard().tempID);
                 _cardIDs.Add(ability.GetCard().id);
                 location = "<>";
-                //Debug.Log(_player1.GetLocation(card));
-                switch (_player1.GetLocation(ability.GetCard()))
+                //Debug.Log(_actingPlayer.GetLocation(card));
+                switch (_actingPlayer.GetLocation(ability.GetCard()))
                 {
                     case Location.RC:
                         location = "<RC>";
@@ -492,7 +481,7 @@ public class VisualInputManager : NetworkBehaviour
                         break;
                 }
                 _strings.Add(location);
-                _upright.Add(_player1.IsUpRight(ability.GetCard()));
+                _upright.Add(_actingPlayer.IsUpRight(ability.GetCard()));
             }
             if (CheckForMandatoryEffects(_abilities))
                 bool_value = true;
@@ -543,6 +532,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
+            intlist_input.Clear();
             foreach (int input in inputManager.inputs)
                 intlist_input.Add(input);
             Debug.Log("received input 1: " + inputManager.input1);
@@ -617,12 +607,6 @@ public class VisualInputManager : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (isServer && Thread.CurrentThread == currentThread && inputManager != null && reversed != inputManager.reversed)
-        {
-            bool newReversed = inputManager.reversed;
-            reversed = newReversed;
-            RpcUpdateReversed(newReversed);
-        }
         if (isServer && Thread.CurrentThread == currentThread && inputManager != null && inputManager.inputSignal > 0)
         {
             int newSignal = inputManager.inputSignal;
@@ -661,6 +645,7 @@ public class VisualInputManager : NetworkBehaviour
             bools.Clear();
             foreach (bool b in inputManager._bools)
                 bools.Add(b);
+            actingPlayer = inputManager._actingPlayer._playerID;
             RpcUpdateInputSignal(newSignal);
         }
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
@@ -774,12 +759,6 @@ public class VisualInputManager : NetworkBehaviour
         StartCoroutine(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcUpdateReversed(bool newReversed)
-    {
-        reversed = newReversed;
-    }
-
     public void OnInputSignalChanged(int oldInputSignal, int newInputSignal)
     {
         Debug.Log("old input signal: " + oldInputSignal);
@@ -789,20 +768,12 @@ public class VisualInputManager : NetworkBehaviour
     public bool isActingPlayer()
     {
         bool value = false;
-        if (isServer)
-        {
-            if (reversed)
-                value = false;
-            else
-                value = true;
-        }
+        if (isServer && actingPlayer == 1)
+            value = true;
+        else if (!isServer && actingPlayer == 2)
+            value = true;
         else
-        {
-            if (reversed)
-                value = true;
-            else
-                value = false;
-        }
+            value = false;
         if (value)
             Debug.Log("is acting player");
         else
@@ -1626,20 +1597,30 @@ public class VisualInputManager : NetworkBehaviour
         if (isActingPlayer())
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select circle to move to.";
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select " + int1 + " circle(s).";
             selectedUnit = -1;
-            while (true)
+            List<int> selectedCircles = new List<int>();
+            while (selectedCircles.Count < int1)
             {
                 if (selectedUnit >= 0)
                 {
                     if (!ints.Contains(selectedUnit))
-                    {
                         Debug.Log("invalid circle");
-                        clicked = false;
-                        selectedUnit = -1;
-                    }
                     else
-                        break;
+                    {
+                        if (selectedCircles.Contains(selectedUnit))
+                        {
+                            UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponentInChildren<UnitSelectArea>().Reset();
+                            selectedCircles.Remove(selectedUnit);
+                        }
+                        else
+                        {
+                            UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponentInChildren<UnitSelectArea>().MarkWithColor(Color.red);
+                            selectedCircles.Add(selectedUnit);
+                        }
+                    }
+                    clicked = false;
+                    selectedUnit = -1;
                 }
                 yield return null;
             }
@@ -1647,7 +1628,7 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInput(selectedUnit);
+            playerManager.CmdChangeInputs(selectedCircles);
         }
         else
         {

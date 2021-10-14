@@ -511,7 +511,6 @@ MonoBehaviour:
   input2: 0
   input3: -1
   readyToContinue: 0
-  reversed: 0
   min: 0
   query: 
   bool1: 0
@@ -10126,6 +10125,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7643632261026799585, guid: 019073d46fefd16429da348022eadd02, type: 3}
+      propertyPath: m_Size
+      value: 0.41845658
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643632261026799585, guid: 019073d46fefd16429da348022eadd02, type: 3}
+      propertyPath: m_Value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643632261026799587, guid: 019073d46fefd16429da348022eadd02, type: 3}
+      propertyPath: m_Name
+      value: CardEffectScrollbar
+      objectReference: {fileID: 0}
     - target: {fileID: 7643632261168870315, guid: 019073d46fefd16429da348022eadd02, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -10137,6 +10148,10 @@ PrefabInstance:
     - target: {fileID: 7643632261168870315, guid: 019073d46fefd16429da348022eadd02, type: 3}
       propertyPath: m_AnchorMin.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7643632261818296276, guid: 019073d46fefd16429da348022eadd02, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -81.765015
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 019073d46fefd16429da348022eadd02, type: 3}

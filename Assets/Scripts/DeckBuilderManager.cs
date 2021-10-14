@@ -250,7 +250,7 @@ public class DeckBuilderManager : MonoBehaviour
         }
         //if (main && mainDeck.Count >= 46)
         //    return;
-        //if (!main && clickedCard.grade > 3)
+        //if (!main && clickedCard.OriginalGrade() > 3)
         //    return;
         //if (!main && clickedCard.unitType == UnitType.NotUnit)
         //    return;
@@ -315,8 +315,8 @@ public class DeckBuilderManager : MonoBehaviour
 
     public void InsertInRideDeck(Card newCard)
     {
-        if (newCard.grade < 4)
-            rideDeck[newCard.grade] = newCard;
+        if (newCard.OriginalGrade() < 4)
+            rideDeck[newCard.OriginalGrade()] = newCard;
     }
 
     public void InsertInMainDeck(Card newCard)
@@ -376,16 +376,16 @@ public class DeckBuilderManager : MonoBehaviour
         }
         for (int i = 0; i < triggerIndex; i++)
         {
-            if (newCard.grade < mainDeck[i].grade)
+            if (newCard.OriginalGrade() < mainDeck[i].OriginalGrade())
             {
                 mainDeck.Insert(i, newCard);
                 return;
             }
-            if (newCard.grade == mainDeck[i].grade)
+            if (newCard.OriginalGrade() == mainDeck[i].OriginalGrade())
             {
                 for (int j = i; j < triggerIndex; j++)
                 {
-                    if (newCard.grade < mainDeck[j].grade)
+                    if (newCard.OriginalGrade() < mainDeck[j].OriginalGrade())
                     {
                         mainDeck.Insert(j, newCard);
                         return;

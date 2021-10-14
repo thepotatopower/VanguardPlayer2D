@@ -38,6 +38,7 @@ public class CardFightManager : NetworkBehaviour
     public bool inAnimation = false;
     public List<IEnumerator> animations = new List<IEnumerator>();
     public List<IEnumerator> RpcCalls = new List<IEnumerator>();
+    public Dictionary<int, RecordedCardValue> _recordedCardValues = new Dictionary<int, RecordedCardValue>();
 
     [SyncVar]
     public int counter;
@@ -83,7 +84,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/magnolia.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/alestiel.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -180,7 +181,9 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnAttack += PerformAttack;
         cardFight._player2.OnAttack += PerformAttack;
         cardFight._player1.OnShieldValueChanged += ChangeShieldValue;
+        cardFight._player1.OnUnitValueChanged += ChangeUnitValue;
         cardFight._player1.OnCardValueChanged += ChangeCardValue;
+        cardFight._player2.OnCardValueChanged += ChangeCardValue;
         cardFight._player1.OnAttackHits += CheckIfAttackHits;
         cardFight._player2.OnAttackHits += CheckIfAttackHits;
         cardFight._player1.OnReveal += PerformReveal;
@@ -245,13 +248,13 @@ public class CardFightManager : NetworkBehaviour
         Card2.name = tempID2.ToString();
         if (isServer)
         {
-            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card1.grade, card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
-            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card2.grade, card2.critical, card2.power, card2.power, true, false, cardID2, Card2);
+            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card1.OriginalGrade(), card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
+            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card2.OriginalGrade(), card2.critical, card2.power, card2.power, true, false, cardID2, Card2);
         }
         else
         {
-            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card2.grade, card2.critical, card2.power, card2.power, true, false, cardID2, Card2);
-            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card1.grade, card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
+            inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card2.OriginalGrade(), card2.critical, card2.power, card2.power, true, false, cardID2, Card2);
+            inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card1.OriginalGrade(), card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
         }
     }
 
@@ -268,7 +271,7 @@ public class CardFightManager : NetworkBehaviour
             card = cardFight._player1.GetUnitAt(e.currentLocation.Item2, false);
             if (card != null)
             {
-                grade = card.grade;
+                grade = card.OriginalGrade();
                 soul = cardFight._player1.GetSoul().Count;
                 critical = card.critical;
                 faceup = true;
@@ -517,7 +520,7 @@ public class CardFightManager : NetworkBehaviour
         {
             GameObject token = CreateNewCard(card.id, card.tempID);
             Debug.Log("token generated: " + token.name);
-            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.grade, critical, card.power, card.power, true, true, card.id, token);
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, true, true, card.id, token);
             inAnimation = false;
             yield break;
         }
@@ -708,7 +711,7 @@ public class CardFightManager : NetworkBehaviour
         }
         else if (currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul)
         {
-            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.grade, critical, card.power, card.power, true, true, card.id, newCard);
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, true, true, card.id, newCard);
         }
         else if (currentZone.GetComponent<GuardianCircle>() != null)
             currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
@@ -791,29 +794,30 @@ public class CardFightManager : NetworkBehaviour
 
     public void ShowAbilityActivated(object sender, CardEventArgs e)
     {
+        Debug.Log("ShowAbilityActivated");
         IEnumerator Dialog()
         {
-            RpcShowAbilityActivated(e.card);
+            RpcShowAbilityActivated(e.card.tempID, e.card.id, e.card.name);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
-    public void RpcShowAbilityActivated(Card card)
+    public void RpcShowAbilityActivated(int tempID, string cardID, string name)
     {
-        animations.Add(ShowAbilityActivatedRoutine(card));
+        animations.Add(ShowAbilityActivatedRoutine(tempID, cardID, name));
     }
 
-    IEnumerator ShowAbilityActivatedRoutine(Card card)
+    IEnumerator ShowAbilityActivatedRoutine(int tempID, string cardID, string name)
     {
-        GameObject target = GameObject.Find(card.tempID.ToString());
+        GameObject target = GameObject.Find(tempID.ToString());
         bool abilityBoxAnimation = true;
         bool sliding = false;
         IEnumerator SlideAbilityBox()
         {
             GameObject abilityBox = Globals.Instance.AbilityBox;
-            abilityBox.GetComponentInChildren<Text>().text = card.name + "'s ability activates!";
+            abilityBox.GetComponentInChildren<Text>().text = name + "'s ability activates!";
             abilityBox.transform.localPosition = Globals.Instance.AbilityBoxResetPosition;
             float step = 600 * Time.deltaTime;
             while (Vector3.Distance(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition) > 0.001f)
@@ -843,7 +847,7 @@ public class CardFightManager : NetworkBehaviour
             {
                 if (target.transform.parent.name == "EnemyHand" && !target.GetComponent<CardBehavior>().faceup)
                 {
-                    target.GetComponent<CardBehavior>().cardID = card.id;
+                    target.GetComponent<CardBehavior>().cardID = cardID;
                     target.GetComponent<CardBehavior>().inAnimation = true;
                     StartCoroutine(target.GetComponent<CardBehavior>().Flip());
                     while (target.GetComponent<CardBehavior>().inAnimation)
@@ -862,12 +866,12 @@ public class CardFightManager : NetworkBehaviour
                 }
             }
         }
-        else if (Globals.Instance.unitSlots.GetUnitSlotWithSoul(card.tempID) != null)
+        else if (Globals.Instance.unitSlots.GetUnitSlotWithSoul(tempID) != null)
         {
             IEnumerator SlideOutFromSoul()
             {
-                GameObject unit = Globals.Instance.unitSlots.GetUnitSlotWithSoul(card.tempID);
-                GameObject newCard = CreateNewCard(card.id, -1);
+                GameObject unit = Globals.Instance.unitSlots.GetUnitSlotWithSoul(tempID);
+                GameObject newCard = CreateNewCard(cardID, -1);
                 newCard.transform.SetParent(GameObject.Find("Field").transform);
                 newCard.transform.SetSiblingIndex(unit.transform.GetSiblingIndex() - 1);
                 newCard.transform.localPosition = unit.transform.localPosition;
@@ -947,7 +951,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Draw, cardFight.actingPlayer._playerID, cardFight._turn);
+            RpcChangePhase(Phase.Draw, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -963,7 +967,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Stand, cardFight.actingPlayer._playerID, cardFight._turn);
+            RpcChangePhase(Phase.Stand, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -977,13 +981,13 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
-        if (isPlayerAction(cardFight.actingPlayer._playerID))
+        if (isPlayerAction(cardFight._actingPlayer._playerID))
             Debug.Log("my turn");
         else
             Debug.Log("their turn");
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Ride, cardFight.actingPlayer._playerID, cardFight._turn);
+            RpcChangePhase(Phase.Ride, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -999,7 +1003,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Main, cardFight.actingPlayer._playerID, cardFight._turn);
+            RpcChangePhase(Phase.Main, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1015,7 +1019,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Battle, cardFight.actingPlayer._playerID, cardFight._turn);
+            RpcChangePhase(Phase.Battle, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1225,7 +1229,7 @@ public class CardFightManager : NetworkBehaviour
         yield return null;
     }
 
-    public void ChangeCardValue(object sender, CardEventArgs e)
+    public void ChangeUnitValue(object sender, CardEventArgs e)
     {
         Player player = sender as Player;
         Debug.Log("updating power value: " + e.currentPower);
@@ -1235,7 +1239,7 @@ public class CardFightManager : NetworkBehaviour
         {
             IEnumerator Dialog()
             {
-                RpcChangeCardValue(e.circle, e.currentPower, e.currentCritical);
+                RpcChangeUnitValue(e.circle, e.currentPower, e.currentCritical);
                 yield return null;
             }
             RpcCalls.Add(Dialog());
@@ -1243,18 +1247,51 @@ public class CardFightManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void RpcChangeCardValue(int circle, int power, int critical)
+    public void RpcChangeUnitValue(int circle, int power, int critical)
     {
         if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
-            animations.Add(UpdateCardValue(circle, power, critical));
+            animations.Add(UpdateUnitValue(circle, power, critical));
         else
             Debug.Log("invalid circle: " + circle);
     }
 
-    IEnumerator UpdateCardValue(int circle, int power, int critical)
+    IEnumerator UpdateUnitValue(int circle, int power, int critical)
     {
         UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._power = power;
         UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._critical = critical;
+        inAnimation = false;
+        yield return null;
+    }
+
+    public void ChangeCardValue(object sender, CardEventArgs e)
+    {
+        Player player = sender as Player;
+        Debug.Log("updating card value");
+        if (e == null)
+            Debug.Log("error with CardEventArgs");
+        else
+        {
+            IEnumerator Dialog()
+            {
+                RpcChangeCardValue(e.i, e.currentGrade);
+                yield return null;
+            }
+            RpcCalls.Add(Dialog());
+        }
+    }
+
+    [ClientRpc]
+    public void RpcChangeCardValue(int tempID, int currentGrade)
+    {
+        animations.Add(UpdateCardValue(tempID, currentGrade));
+    }
+
+    IEnumerator UpdateCardValue(int tempID, int currentGrade)
+    {
+        if (!_recordedCardValues.ContainsKey(tempID))
+            _recordedCardValues[tempID] = new RecordedCardValue(currentGrade);
+        else
+            _recordedCardValues[tempID].currentGrade = currentGrade;
         inAnimation = false;
         yield return null;
     }
@@ -1289,24 +1326,24 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcPerformReveal(e.card, e.currentLocation.Item1);
+            RpcPerformReveal(e.card.tempID, e.card.id, e.card.originalOwner, e.currentLocation.Item1);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
-    public void RpcPerformReveal(Card card, int location)
+    public void RpcPerformReveal(int tempID, string cardID, int playerID, int location)
     {
-        animations.Add(Reveal(card, location));
+        animations.Add(Reveal(tempID, cardID, playerID, location));
     }
 
-    IEnumerator Reveal(Card card, int location)
+    IEnumerator Reveal(int tempID, string cardID, int playerID, int location)
     {
-        if (GameObject.Find("EnemyHand").GetComponent<Hand>().IsInHand(card.tempID))
+        if (GameObject.Find("EnemyHand").GetComponent<Hand>().IsInHand(tempID))
         {
-            CardBehavior revealedCard = GameObject.Find(card.tempID.ToString()).GetComponent<CardBehavior>();
-            revealedCard.cardID = card.id;
+            CardBehavior revealedCard = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
+            revealedCard.cardID = cardID;
             revealedCard.inAnimation = true;
             revealedCard.faceup = false;
             StartCoroutine(revealedCard.Flip());
@@ -1321,10 +1358,10 @@ public class CardFightManager : NetworkBehaviour
             while (revealedCard.inAnimation)
                 yield return null;
         }
-        else if (GameObject.Find("PlayerHand").GetComponent<Hand>().IsInHand(card.tempID))
+        else if (GameObject.Find("PlayerHand").GetComponent<Hand>().IsInHand(tempID))
         {
-            CardBehavior revealedCard = GameObject.Find(card.tempID.ToString()).GetComponent<CardBehavior>();
-            revealedCard.cardID = card.id;
+            CardBehavior revealedCard = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
+            revealedCard.cardID = cardID;
             revealedCard.inAnimation = true;
             StartCoroutine(revealedCard.Flash(Color.white));
             while (revealedCard.inAnimation)
@@ -1332,8 +1369,8 @@ public class CardFightManager : NetworkBehaviour
         }
         else if (location == Location.Deck)
         {
-            CardBehavior revealedCard = CreateNewCard(card.id, card.tempID).GetComponent<CardBehavior>();
-            if (isPlayerAction(card.originalOwner))
+            CardBehavior revealedCard = CreateNewCard(cardID, tempID).GetComponent<CardBehavior>();
+            if (isPlayerAction(playerID))
                 revealedCard.transform.SetParent(GameObject.Find("PlayerDeck").transform);
             else
                 revealedCard.transform.SetParent(GameObject.Find("EnemyDeck").transform);
@@ -1494,7 +1531,7 @@ public class CardFightManager : NetworkBehaviour
         ZoomIn.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
         Card card = LookUpCard(cardID);
         CardName.text = card.name;
-        string effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
+        string effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.OriginalGrade() + "]\n" + card.effect;
         CardEffect.text = effect;
     }
 

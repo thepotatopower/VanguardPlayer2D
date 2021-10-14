@@ -57,8 +57,14 @@ public class CardBehavior : MonoBehaviour
                 Debug.Log("cardFightManager is null");
             card = cardFightManager.LookUpCard(cardID);
             CardName.text = card.name;
-            effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.grade + "]\n" + card.effect;
+            effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: ";
+            if (cardFightManager._recordedCardValues.ContainsKey(card.tempID))
+                effect += cardFightManager._recordedCardValues[card.tempID].currentGrade;
+            else
+                effect += card.OriginalGrade();
+            effect += "]\n" + card.effect;
             CardEffect.text = effect;
+            GameObject.Find("CardEffectScrollbar").GetComponent<Scrollbar>().value = 1;
             ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
         }
         if (this.transform.parent.name == "PlayerHand" && inputManager.cardsAreHoverable)
