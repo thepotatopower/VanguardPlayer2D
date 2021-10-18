@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using VanguardEngine;
+using System;
 
 public class CardBehavior : MonoBehaviour
 {
@@ -18,8 +19,7 @@ public class CardBehavior : MonoBehaviour
     public Canvas canvas;
     public Text CardName;
     public Text CardEffect;
-    public Card card;
-    public string cardID;
+    public Card card = null;
     public bool faceup = false;
     public int layer = 0;
     public bool selected = false;
@@ -47,25 +47,25 @@ public class CardBehavior : MonoBehaviour
 
     public void DisplayCard()
     {
-        Card card;
-        string effect;
         if (originalPosition == new Vector3(0, 0, 0))
             originalPosition = this.transform.position;
-        if (this.cardID != "" && (this.faceup || (!this.faceup && this.transform.parent != GameObject.Find("EnemyHand").transform && !this.transform.parent.name.Contains("Deck"))))
+        if (card == null)
+            Debug.Log("card is null");
+        if (card != null && (this.faceup || (!this.faceup && this.transform.parent != GameObject.Find("EnemyHand").transform && !this.transform.parent.name.Contains("Deck"))))
         {
             if (cardFightManager == null)
                 Debug.Log("cardFightManager is null");
-            card = cardFightManager.LookUpCard(cardID);
-            CardName.text = card.name;
-            effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: ";
-            if (cardFightManager._recordedCardValues.ContainsKey(card.tempID))
-                effect += cardFightManager._recordedCardValues[card.tempID].currentGrade;
             else
-                effect += card.OriginalGrade();
-            effect += "]\n" + card.effect;
-            CardEffect.text = effect;
-            GameObject.Find("CardEffectScrollbar").GetComponent<Scrollbar>().value = 1;
-            ZoomIn.GetComponent<Image>().sprite = this.GetComponent<Image>().sprite;
+            {
+                //int parsed = -1;
+                cardFightManager.DisplayCard(card.id, card.tempID);
+                //if (Int32.TryParse(this.name, out parsed))
+                //{
+                //    cardFightManager.DisplayCard(card.id, parsed);
+                //}
+                //else
+                //    cardFightManager.DisplayCard(card.id, -1);
+            }
         }
         if (this.transform.parent.name == "PlayerHand" && inputManager.cardsAreHoverable)
         {
@@ -198,7 +198,7 @@ public class CardBehavior : MonoBehaviour
         else
         {
             faceup = true;
-            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(cardID));
+            this.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(card.id));
         }
         while (Quaternion.Angle(this.transform.localRotation, Zero) > 0.01f)
         {

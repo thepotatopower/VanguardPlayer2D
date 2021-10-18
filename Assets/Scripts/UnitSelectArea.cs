@@ -16,7 +16,7 @@ public class UnitSelectArea : MonoBehaviour
             unitSlot.GetComponent<Image>().enabled = true;
             unitSlot.GetComponent<Image>().color = Color.green;
             if (unitSlot.unit != null && unitSlot._faceup)
-                GameObject.Find("CardFightManager").GetComponent<CardFightManager>().DisplayCard(unitSlot._cardID);
+                GameObject.Find("CardFightManager").GetComponent<CardFightManager>().DisplayCard(unitSlot._cardID, int.Parse(unitSlot.unit.name));
             if (Globals.Instance.cardFightManager != null && Globals.Instance.cardFightManager._attacked.Contains(unitSlot._FL))
                 Globals.Instance.SLD.currentIndex = Globals.Instance.cardFightManager._attacked.IndexOf(unitSlot._FL);
         }

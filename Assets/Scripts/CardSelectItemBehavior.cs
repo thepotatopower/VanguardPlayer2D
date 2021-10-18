@@ -25,7 +25,7 @@ public class CardSelectItemBehavior : MonoBehaviour
 
     public void OnPointerEnter()
     {
-        cardFightManager.DisplayCard(cardID);
+        cardFightManager.DisplayCard(cardID, tempID);
         if (!selected)
             this.GetComponent<Image>().color = new Color32(195, 243, 250, 255);
     }

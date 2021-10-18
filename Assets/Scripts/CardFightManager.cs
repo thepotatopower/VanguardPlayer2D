@@ -84,7 +84,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/alestiel.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/loronerol.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -196,7 +196,19 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnAttackEnds += CheckIfAttackHits;
         inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
-        RpcInitializeDecks(cardFight._player1.GetDeck().Count, cardFight._player2.GetDeck().Count);
+        List<CardData> player1IDs = new List<CardData>();
+        List<CardData> player2IDs = new List<CardData>();
+        List<CardData> player1IDsRide = new List<CardData>();
+        List<CardData> player2IDsRide = new List<CardData>();
+        foreach (Card card in cardFight._player1.GetDeck())
+            player1IDs.Add(new CardData(card.tempID, card.id));
+        foreach (Card card in cardFight._player2.GetDeck())
+            player2IDs.Add(new CardData(card.tempID, card.id));
+        foreach (Card card in cardFight._player1.GetRideDeck())
+            player1IDsRide.Add(new CardData(card.tempID, card.id));
+        foreach (Card card in cardFight._player2.GetRideDeck())
+            player2IDsRide.Add(new CardData(card.tempID, card.id));
+        RpcInitializeDecks(player1IDs.ToArray(), player2IDs.ToArray(), player1IDsRide.ToArray(), player2IDsRide.ToArray());
         RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
         Debug.Log("cardfight started");
@@ -209,32 +221,58 @@ public class CardFightManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void RpcInitializeDecks(int player1_count, int player2_count)
+    public void RpcInitializeDecks(CardData[] player1Cards, CardData[] player2Cards, CardData[] player1RideCards, CardData[] player2RideCards)
     {
+        CardData[] myDeck;
+        CardData[] myRideDeck;
+        CardData[] enemyDeck;
+        CardData[] enemyRideDeck;
         if (isServer)
         {
+            myDeck = player1Cards;
+            myRideDeck = player1RideCards;
+            enemyDeck = player2Cards;
+            enemyRideDeck = player2RideCards;
             Debug.Log("server setting up decks");
-            PlayerDeckZone.GetComponent<Pile>().InitializeCount(player1_count);
-            EnemyDeckZone.GetComponent<Pile>().InitializeCount(player2_count);
-            PlayerRideDeckZone.GetComponent<Pile>().InitializeCount(3);
-            EnemyRideDeckZone.GetComponent<Pile>().InitializeCount(3);
             UnitSlots.GetComponent<UnitSlots>().Initialize(1);
         }
         else
         {
+            myDeck = player2Cards;
+            myRideDeck = player2RideCards;
+            enemyDeck = player1Cards;
+            enemyRideDeck = player1RideCards;
             Debug.Log("client setting up decks");
-            PlayerDeckZone.GetComponent<Pile>().InitializeCount(player2_count);
-            EnemyDeckZone.GetComponent<Pile>().InitializeCount(player1_count);
-            PlayerRideDeckZone.GetComponent<Pile>().InitializeCount(3);
-            EnemyRideDeckZone.GetComponent<Pile>().InitializeCount(3);
             UnitSlots.GetComponent<UnitSlots>().Initialize(2);
         }
-        PlayerDropZone.GetComponent<Pile>().InitializeCount(0);
-        EnemyDropZone.GetComponent<Pile>().InitializeCount(0);
-        Globals.Instance.playerOrderZone.GetComponent<Pile>().InitializeCount(0);
-        Globals.Instance.enemyOrderZone.GetComponent<Pile>().InitializeCount(0);
-        Globals.Instance.playerBindZone.GetComponent<Pile>().InitializeCount(0);
-        Globals.Instance.enemyBindZone.GetComponent<Pile>().InitializeCount(0);
+        for (int i = 0; i < myDeck.Length; i++)
+        {
+            Card card = LookUpCard(myDeck[i]._cardID);
+            card.tempID = myDeck[i]._tempID;
+            PlayerDeckZone.GetComponent<Pile>().AddCard(card, false, false);
+        }
+        PlayerDeckZone.GetComponent<Pile>().UpdateVisuals(true);
+        for (int i = 0; i < enemyDeck.Length; i++)
+        {
+            Card card = LookUpCard(enemyDeck[i]._cardID);
+            card.tempID = enemyDeck[i]._tempID;
+            EnemyDeckZone.GetComponent<Pile>().AddCard(card, false, false);
+        }
+        EnemyDeckZone.GetComponent<Pile>().UpdateVisuals(true);
+        for (int i = 0; i < myRideDeck.Length; i++)
+        {
+            Card card = LookUpCard(myRideDeck[i]._cardID);
+            card.tempID = myRideDeck[i]._tempID;
+            PlayerRideDeckZone.GetComponent<Pile>().AddCard(card, false, false);
+        }
+        PlayerRideDeckZone.GetComponent<Pile>().UpdateVisuals(true);
+        for (int i = 0; i < enemyRideDeck.Length; i++)
+        {
+            Card card = LookUpCard(enemyRideDeck[i]._cardID);
+            card.tempID = enemyRideDeck[i]._tempID;
+            EnemyRideDeckZone.GetComponent<Pile>().AddCard(card, false, false);
+        }
+        EnemyRideDeckZone.GetComponent<Pile>().UpdateVisuals(true);
     }
 
     [ClientRpc]
@@ -246,6 +284,8 @@ public class CardFightManager : NetworkBehaviour
         GameObject Card2 = GameObject.Instantiate(cardPrefab);
         Card1.name = tempID1.ToString();
         Card2.name = tempID2.ToString();
+        Card1.GetComponent<CardBehavior>().card = card1;
+        Card2.GetComponent<CardBehavior>().card = card2;
         if (isServer)
         {
             inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card1.OriginalGrade(), card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
@@ -727,10 +767,14 @@ public class CardFightManager : NetworkBehaviour
 
 
         if (currentZone.GetComponent<Pile>() != null)
-            currentZone.GetComponent<Pile>().AddCard(card);
+        {
+            if (currentZone.name == "PlayerDeck" || currentZone.name == "EnemyDeck")
+                currentZone.GetComponent<Pile>().AddCard(card, false);
+            currentZone.GetComponent<Pile>().AddCard(card, true);
+        }
 
-        Globals.Instance.playerMiscStats.SetWorld(Globals.Instance.playerOrderZone.GetComponent<Pile>().pile);
-        Globals.Instance.enemyMiscStats.SetWorld(Globals.Instance.enemyOrderZone.GetComponent<Pile>().pile);
+        Globals.Instance.playerMiscStats.SetWorld(Globals.Instance.playerOrderZone.GetComponent<Pile>().GetCards());
+        Globals.Instance.enemyMiscStats.SetWorld(Globals.Instance.enemyOrderZone.GetComponent<Pile>().GetCards());
         inputManager.cardsAreHoverable = true;
         inAnimation = false;
     }
@@ -847,7 +891,7 @@ public class CardFightManager : NetworkBehaviour
             {
                 if (target.transform.parent.name == "EnemyHand" && !target.GetComponent<CardBehavior>().faceup)
                 {
-                    target.GetComponent<CardBehavior>().cardID = cardID;
+                    target.GetComponent<CardBehavior>().card = LookUpCard(cardID);
                     target.GetComponent<CardBehavior>().inAnimation = true;
                     StartCoroutine(target.GetComponent<CardBehavior>().Flip());
                     while (target.GetComponent<CardBehavior>().inAnimation)
@@ -909,7 +953,8 @@ public class CardFightManager : NetworkBehaviour
     {
         GameObject newCard = GameObject.Instantiate(cardPrefab);
         newCard.name = tempID.ToString();
-        newCard.GetComponent<CardBehavior>().cardID = cardID;
+        newCard.GetComponent<CardBehavior>().card = LookUpCard(cardID);
+        newCard.GetComponent<CardBehavior>().card.tempID = tempID;
         newCard.GetComponent<CardBehavior>().faceup = true;
         newCard.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
         return newCard;
@@ -1184,20 +1229,32 @@ public class CardFightManager : NetworkBehaviour
 
     IEnumerator Flip(int tempID, bool faceup)
     {
-        CardBehavior card = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
-        //if (card.faceup != faceup)
-        //{
-        //    card.inAnimation = true;
-        //    StartCoroutine(card.Flip());
-        //    while (card.inAnimation)
-        //        yield return null;
-        //}
-        card.inAnimation = true;
-        StartCoroutine(card.Flip());
-        while (card.inAnimation)
-            yield return null;
-        if (card.transform.parent.GetComponent<UnitSlotBehavior>() != null)
-            card.transform.parent.GetComponent<UnitSlotBehavior>()._faceup = faceup;
+        if (GameObject.Find(tempID.ToString()) != null)
+        {
+            CardBehavior card = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
+            //if (card.faceup != faceup)
+            //{
+            //    card.inAnimation = true;
+            //    StartCoroutine(card.Flip());
+            //    while (card.inAnimation)
+            //        yield return null;
+            //}
+            card.inAnimation = true;
+            StartCoroutine(card.Flip());
+            while (card.inAnimation)
+                yield return null;
+            if (card.transform.parent.GetComponent<UnitSlotBehavior>() != null)
+                card.transform.parent.GetComponent<UnitSlotBehavior>()._faceup = faceup;
+        }
+        if (Globals.Instance.playerOrderZone.ContainsCard(tempID))
+        {
+            Globals.Instance.playerOrderZone.Flipped(tempID, faceup);
+        }
+        if (Globals.Instance.enemyOrderZone.ContainsCard(tempID))
+        {
+            Globals.Instance.enemyOrderZone.Flipped(tempID, faceup);
+        }
+
         inAnimation = false;
     }
 
@@ -1266,18 +1323,12 @@ public class CardFightManager : NetworkBehaviour
     public void ChangeCardValue(object sender, CardEventArgs e)
     {
         Player player = sender as Player;
-        Debug.Log("updating card value");
-        if (e == null)
-            Debug.Log("error with CardEventArgs");
-        else
+        IEnumerator Dialog()
         {
-            IEnumerator Dialog()
-            {
-                RpcChangeCardValue(e.i, e.currentGrade);
-                yield return null;
-            }
-            RpcCalls.Add(Dialog());
+            RpcChangeCardValue(e.i, e.currentGrade);
+            yield return null;
         }
+        RpcCalls.Add(Dialog());
     }
 
     [ClientRpc]
@@ -1288,6 +1339,7 @@ public class CardFightManager : NetworkBehaviour
 
     IEnumerator UpdateCardValue(int tempID, int currentGrade)
     {
+        Debug.Log("updating grade, tempID: " + tempID + ", grade: " + currentGrade);
         if (!_recordedCardValues.ContainsKey(tempID))
             _recordedCardValues[tempID] = new RecordedCardValue(currentGrade);
         else
@@ -1343,7 +1395,7 @@ public class CardFightManager : NetworkBehaviour
         if (GameObject.Find("EnemyHand").GetComponent<Hand>().IsInHand(tempID))
         {
             CardBehavior revealedCard = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
-            revealedCard.cardID = cardID;
+            revealedCard.card = LookUpCard(cardID);
             revealedCard.inAnimation = true;
             revealedCard.faceup = false;
             StartCoroutine(revealedCard.Flip());
@@ -1361,7 +1413,7 @@ public class CardFightManager : NetworkBehaviour
         else if (GameObject.Find("PlayerHand").GetComponent<Hand>().IsInHand(tempID))
         {
             CardBehavior revealedCard = GameObject.Find(tempID.ToString()).GetComponent<CardBehavior>();
-            revealedCard.cardID = cardID;
+            revealedCard.card = LookUpCard(cardID);
             revealedCard.inAnimation = true;
             StartCoroutine(revealedCard.Flash(Color.white));
             while (revealedCard.inAnimation)
@@ -1523,7 +1575,7 @@ public class CardFightManager : NetworkBehaviour
         return (Application.dataPath + "/../cardart/" + input + ".png");
     }
 
-    public void DisplayCard(string cardID)
+    public void DisplayCard(string cardID, int tempID)
     {
         GameObject ZoomIn = GameObject.Find("ZoomIn");
         Text CardName = GameObject.Find("CardName").GetComponent<Text>();
@@ -1531,8 +1583,19 @@ public class CardFightManager : NetworkBehaviour
         ZoomIn.GetComponent<Image>().sprite = LoadSprite(FixFileName(cardID));
         Card card = LookUpCard(cardID);
         CardName.text = card.name;
-        string effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: " + card.OriginalGrade() + "]\n" + card.effect;
+        string effect = "[Power: " + card.power + "] [Shield: " + card.shield + "] [Grade: ";
+        if (_recordedCardValues.ContainsKey(tempID))
+        {
+            effect += _recordedCardValues[tempID].currentGrade;
+        }
+        else
+        {
+            Debug.Log("recordedCardValues does not contain tempID " + tempID);
+            effect += card.OriginalGrade();
+        }
+        effect += "]\n" + card.effect;
         CardEffect.text = effect;
+        GameObject.Find("CardEffectScrollbar").GetComponent<Scrollbar>().value = 1;
     }
 
     public bool isPlayerAction(int playerID)
@@ -1548,6 +1611,18 @@ public class CardFightManager : NetworkBehaviour
             if (playerID == 2)
                 return true;
             return false;
+        }
+    }
+
+    public readonly struct CardData
+    {
+        public readonly int _tempID;
+        public readonly string _cardID;
+
+        public CardData(int tempID, string cardID)
+        {
+            _tempID = tempID;
+            _cardID = cardID;
         }
     }
 }

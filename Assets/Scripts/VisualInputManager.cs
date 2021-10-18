@@ -233,6 +233,9 @@ public class VisualInputManager : NetworkBehaviour
                     case Location.Soul:
                         location = "<Soul>";
                         break;
+                    case Location.Deck:
+                        location = "<Deck>";
+                        break;
                 }
                 _strings.Add(location);
                 _faceup.Add(_actingPlayer.IsFaceUp(card));
@@ -1342,7 +1345,6 @@ public class VisualInputManager : NetworkBehaviour
         }
         toggle.transform.localPosition = Globals.Instance.TogglePosition;
         Globals.Instance.callCard.transform.localPosition = new Vector3(0, 200, 0);
-        Globals.Instance.callCard.cardID = string1;
         Globals.Instance.callCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(CardFightManager.FixFileName(string1));
         clicked = false;
         if (isActingPlayer())
@@ -1727,7 +1729,7 @@ public class VisualInputManager : NetworkBehaviour
         }
         if (!pile.gameObject.name.Contains("Deck") && cardFightManager != null && !cardFightManager.InAnimation())
         {
-            if (pile.pile.Count == 0)
+            if (pile.GetCards().Count == 0)
                 return;
             viewButton.transform.SetParent(Buttons.transform);
             selectedGameObject = pile.gameObject;
@@ -1742,10 +1744,19 @@ public class VisualInputManager : NetworkBehaviour
         if (selectedGameObject.TryGetComponent(out Pile pile))
         {
             cardViewer.Show();
-            cardViewer.Initialize("Player Drop Zone", 0, 0);
-            foreach (Card card in pile.pile)
+            string label = "";
+            if (pile.name == "PlayerDropZone")
+                label = "Player Drop Zone";
+            else if (pile.name == "EnemyDropZone")
+                label = "Enemy Drop Zone";
+            else if (pile.name == "PlayerOrderZone")
+                label = "Player Order Zone";
+            else if (pile.name == "EnemyOrderZone")
+                label = "Enemy Order Zone";
+            cardViewer.Initialize(label, 0, 0);
+            foreach (Tuple<Card, bool> item in pile.GetCardsWithFaceUp())
             {
-                cardViewer.AddCardSelectItem(card.tempID, card.id, card.name, true, true, false, "");
+                cardViewer.AddCardSelectItem(item.Item1.tempID, item.Item1.id, item.Item1.name, item.Item2, true, false, "");
             }
         }
         else if (selectedGameObject.GetComponent<UnitSlotBehavior>() != null)

@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using VanguardEngine;
+using System;
 
 public class MiscStats : MonoBehaviour
 {
     public Text miscTextPrefab;
     public Text prisonersText;
     public Text worldText;
+    public Text songText;
     public bool hasPrison = false;
     public int prisoners = 0;
 
@@ -71,5 +73,32 @@ public class MiscStats : MonoBehaviour
             else if (world >= 2)
                 worldText.text = "Abyssal Dark Night";
         }
+    }
+
+    public void UpdateSongText()
+    {
+        if (songText == null)
+        {
+            songText = GameObject.Instantiate(miscTextPrefab);
+            songText.transform.SetParent(this.transform);
+        }
+        songText.text = "Songs: ";
+        List<Tuple<Card, bool>> cards;
+        if (this.name.Contains("Player"))
+            cards = Globals.Instance.playerOrderZone.GetCardsWithFaceUp();
+        else
+            cards = Globals.Instance.enemyOrderZone.GetCardsWithFaceUp();
+        int songs = 0;
+        int faceups = 0;
+        foreach (Tuple<Card, bool> item in cards)
+        {
+            if (item.Item1.orderType == OrderType.Song)
+            {
+                songs++;
+                if (item.Item2)
+                    faceups++;
+            }
+        }
+        songText.text += faceups + "/" + songs;
     }
 }
