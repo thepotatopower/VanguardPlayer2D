@@ -90,7 +90,7 @@ public class UnitSelectArea : MonoBehaviour
                 yield return new WaitForSecondsRealtime((float)0.10);
                 unitSlot.GetComponent<Image>().enabled = false;
                 yield return new WaitForSecondsRealtime((float)0.10);
-                Debug.Log("flashing");
+                //Debug.Log("flashing");
             }
             OnPointerExit();
         }

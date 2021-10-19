@@ -136,8 +136,9 @@ public class Pile : NetworkBehaviour
         topCard = null;
         if (pile.Count > 0)
         {
+            Debug.Log("rendering top card");
             topCard = Globals.Instance.cardFightManager.CreateNewCard(pile[0].id, pile[0].tempID).GetComponent<CardBehavior>();
-            topCard.transform.parent = this.transform;
+            topCard.transform.SetParent(this.transform);
             topCard.transform.localPosition = Vector2.zero;
             topCard.card = pile[0];
             if (this.name.Contains("Enemy"))
@@ -149,6 +150,8 @@ public class Pile : NetworkBehaviour
                 topCard.GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");
             topCard.name = "TopCard";
         }
+        else
+            Debug.Log("not rendering top card");
         pileCount.text = pile.Count.ToString();
         if (name == "PlayerOrderZone")
             Globals.Instance.playerMiscStats.UpdateSongText();

@@ -53,7 +53,9 @@ public class CardSelect : MonoBehaviour
         CardSelectItem = GameObject.Instantiate(CardSelectItemPrefab);
         //CardSelectItem.name = tempID.ToString();
         CardSelectItem.GetComponent<CardSelectItemBehavior>().tempID = tempID;
-        if (!faceup && GameObject.Find(tempID.ToString()) != null && GameObject.Find(tempID.ToString()).transform.parent != GameObject.Find("PlayerHand").transform)
+        if (!faceup && (Globals.Instance.playerOrderZone.ContainsCard(tempID) || 
+            Globals.Instance.enemyOrderZone.ContainsCard(tempID) ||
+            (GameObject.Find(tempID.ToString()) != null && GameObject.Find(tempID.ToString()).transform.parent != GameObject.Find("PlayerHand").transform)))
         {
             CardSelectItem.transform.GetChild(0).GetComponent<CardBehavior>().faceup = false;
             CardSelectItem.transform.GetChild(0).GetComponent<Image>().sprite = CardFightManager.LoadSprite(Application.dataPath + "/../cardart/FaceDownCard.jpg");

@@ -84,7 +84,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/loronerol.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/wilista.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -1590,7 +1590,7 @@ public class CardFightManager : NetworkBehaviour
         }
         else
         {
-            Debug.Log("recordedCardValues does not contain tempID " + tempID);
+            //Debug.Log("recordedCardValues does not contain tempID " + tempID);
             effect += card.OriginalGrade();
         }
         effect += "]\n" + card.effect;
