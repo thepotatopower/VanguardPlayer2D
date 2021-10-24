@@ -18,7 +18,7 @@ public class UnitSlotBehavior : MonoBehaviour
     public Text Power;
     public bool _upright = true;
     public bool _faceup = true;
-    public string _cardID;
+    public string _cardID = "";
     public GameObject unit = null;
     public int slot;
     public bool inAnimation = false;
@@ -85,7 +85,7 @@ public class UnitSlotBehavior : MonoBehaviour
             GameObject.Destroy(unit);
         }
         unit = card;
-        Debug.Log("adding card: " + unit.name);
+        Debug.Log("adding card: " + unit.name + ", cardID: " + cardID);
         unit.transform.SetParent(this.transform);
         Debug.Log("parent of card: " + unit.transform.parent.name);
         unit.transform.SetAsFirstSibling();

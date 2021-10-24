@@ -84,7 +84,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/wilista.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/kairi_variant.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -560,7 +560,7 @@ public class CardFightManager : NetworkBehaviour
         {
             GameObject token = CreateNewCard(card.id, card.tempID);
             Debug.Log("token generated: " + token.name);
-            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, true, true, card.id, token);
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, upright, true, card.id, token);
             inAnimation = false;
             yield break;
         }
@@ -751,7 +751,7 @@ public class CardFightManager : NetworkBehaviour
         }
         else if (currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul)
         {
-            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, true, true, card.id, newCard);
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, upright, true, card.id, newCard);
         }
         else if (currentZone.GetComponent<GuardianCircle>() != null)
             currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
@@ -813,6 +813,11 @@ public class CardFightManager : NetworkBehaviour
         int i = 2;
         IEnumerator MoveUnitSlot(GameObject previousObject, GameObject nextObject, string cardID)
         {
+            if (cardID == "")
+            {
+                i--;
+                yield break;
+            }
             GameObject newCard = CreateNewCard(cardID, -1);
             newCard.transform.SetParent(Field.transform);
             newCard.transform.position = previousObject.transform.position;
@@ -1557,7 +1562,7 @@ public class CardFightManager : NetworkBehaviour
     {
         List<Card> card;
         List<string> _cardID;
-        //Debug.Log("looking up " + cardID + "...");
+        Debug.Log("looking up " + cardID + "...");
         if (cardDict.ContainsKey(cardID))
             return cardDict[cardID];
         else
