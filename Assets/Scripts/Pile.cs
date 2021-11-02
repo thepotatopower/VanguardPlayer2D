@@ -10,7 +10,7 @@ public class Pile : NetworkBehaviour
 {
     public PlayerManager playerManager;
     public Text pileCount;
-    List<Card> pile = new List<Card>();
+    public List<Card> pile = new List<Card>();
     List<bool> _faceup = new List<bool>();
     public CardBehavior topCard;
     public bool selectable = false;

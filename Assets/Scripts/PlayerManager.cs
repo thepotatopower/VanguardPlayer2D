@@ -20,9 +20,10 @@ public class PlayerManager : NetworkBehaviour
     public GameObject inputManager;
     public GameObject CardFightManager;
     public VanguardEngine.CardFight cardFight;
-    public List<Card> player1_deck;
-    public List<Card> player2_deck;
+    public List<string> player1cards;
+    public List<string> player2cards;
     public int i = 0;
+    public bool server = false;
 
     public override void OnStartClient()
     {
@@ -33,6 +34,10 @@ public class PlayerManager : NetworkBehaviour
         PlayerHand = GameObject.Find("PlayerHand");
         EnemyHand = GameObject.Find("EnemyHand");
         inputManager = GameObject.Find("InputManager");
+        if (isServer)
+            server = true;
+        else
+            server = false;
     }
 
     [Server]
@@ -50,94 +55,109 @@ public class PlayerManager : NetworkBehaviour
         if (player == 1)
         {
             foreach (string item in input)
+            {
                 cardFightManager.player1_deck.Add(item);
+            }
         }
         else
         {
             foreach (string item in input)
+            {
                 cardFightManager.player2_deck.Add(item);
+            }
         }
         if (cardFightManager.player1_deck.Count > 0 && cardFightManager.player2_deck.Count > 0 && cardFightManager.cardFight == null)
-            TargetInitialize(cardFightManager.host.connectionToClient);
-    }
-
-    [TargetRpc]
-    public void TargetInitialize(NetworkConnection target)
-    {
-        CardFightManager = GameObject.Find("CardFightManager");
-        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        cardFightManager.InitializeCardFight();
-    }
-
-    [Command]
-    public void CmdChangeInput(int player, int input)
-    {
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        if (player == 1)
-            vim.player1_input = input;
-        else
-            vim.player2_input = input;
-        Debug.Log("Player: " + player + " Input: " + input);
-        vim.numResponses++;
-        Debug.Log("numResponses: " + vim.numResponses.ToString());
-        if (vim.numResponses == 2)
-        {
-            RpcResetReceive();
-        }
-    }
-
-    [Command]
-    public void CmdChangeInputs(List<int> inputs)
-    {
-        Debug.Log("CmdChangeInputs");
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        foreach (int input in inputs)
-            vim.inputs.Add(input);
-        vim.numResponses = 2;
-        RpcResetReceive();
-    }
-
-    [Command]
-    public void CmdSingleInput(int selection)
-    {
-        Debug.Log("CmdSingleInput");
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        vim.player1_input = selection;
-        vim.input1 = selection;
-        vim.numResponses = 2;
-        RpcResetReceive();
-    }
-
-    [Command]
-    public void CmdSingleInputs(int selection1, int selection2)
-    {
-        Debug.Log("CmdSingleInputs");
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        vim.input1 = selection1;
-        vim.input2 = selection2;
-        vim.numResponses = 2;
-        RpcResetReceive();
-    }
-
-    [Command]
-    public void CmdReady()
-    {
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        vim.numResponses--;
-        Debug.Log("numResponses: " + vim.numResponses.ToString());
-        if (vim.numResponses == 0)
-        {
-            Debug.Log("ready to continue");
-            vim.readyToContinue = true;
-        }
+            RpcTargetInitialize(cardFightManager.player1_deck, cardFightManager.player2_deck);
     }
 
     [ClientRpc]
-    public void RpcResetReceive()
+    public void RpcAddCardToDeck(int playerID, string cardID)
     {
-        VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-        vim.ResetReceive();
+        CardFightManager = GameObject.Find("CardFightManager");
+        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
+        if (playerID == 1)
+            cardFightManager.player1_deck.Add(cardID);
+        else
+            cardFightManager.player2_deck.Add(cardID);
     }
+
+    [ClientRpc]
+    public void RpcTargetInitialize(List<string> player1cards, List<string> player2cards)
+    {
+        CardFightManager = GameObject.Find("CardFightManager");
+        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
+        cardFightManager.InitializeCardFight(player1cards, player2cards);
+    }
+
+    //[Command]
+    //public void CmdChangeInput(int player, int input)
+    //{
+    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    //    if (player == 1)
+    //        vim.player1_input = input;
+    //    else
+    //        vim.player2_input = input;
+    //    Debug.Log("Player: " + player + " Input: " + input);
+    //    vim.numResponses++;
+    //    Debug.Log("numResponses: " + vim.numResponses.ToString());
+    //    if (vim.numResponses == 2)
+    //    {
+    //        RpcResetReceive();
+    //    }
+    //}
+
+    //[Command]
+    //public void CmdChangeInputs(List<int> inputs)
+    //{
+    //    Debug.Log("CmdChangeInputs");
+    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    //    foreach (int input in inputs)
+    //        vim.inputs.Add(input);
+    //    vim.numResponses = 2;
+    //    RpcResetReceive();
+    //}
+
+    ////[Command]
+    ////public void CmdSingleInput(int selection)
+    ////{
+    ////    Debug.Log("CmdSingleInput");
+    ////    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    ////    vim.player1_input = selection;
+    ////    vim.input1 = selection;
+    ////    vim.numResponses = 2;
+    ////    RpcResetReceive();
+    ////}
+
+    //[Command]
+    //public void CmdSingleInputs(int selection1, int selection2)
+    //{
+    //    Debug.Log("CmdSingleInputs");
+    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    //    vim.input1 = selection1;
+    //    vim.input2 = selection2;
+    //    vim.numResponses = 2;
+    //    RpcResetReceive();
+    //}
+
+    //[Command]
+    //public void CmdReady()
+    //{
+    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    //    vim.numResponses--;
+    //    Debug.Log("numResponses: " + vim.numResponses.ToString());
+    //    if (vim.numResponses == 0)
+    //    {
+    //        Debug.Log("ready to continue");
+    //        vim.readyToContinue = true;
+    //    }
+    //}
+
+    //[ClientRpc]
+    //public void RpcResetReceive()
+    //{
+    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
+    //    vim.ResetReceive();
+    //}
 
     // Update is called once per frame
     void Update()
@@ -171,16 +191,36 @@ public class PlayerManager : NetworkBehaviour
         return ("../art/" + firstHalf + secondHalf.Substring(0, second) + "_" + secondHalf.Substring(second + 1, secondHalf.Length - (second + 1)) + ".png").ToLower();
     }
 
-    //InputManagerstuff
     [Command]
-    public void CmdInitiateRPS()
+    public void CmdShuffleSeed(int playerID, int seed)
     {
-        RpcInitiateRPS();
+        Debug.Log("CmdShuffleSeed, playerID: " + playerID + ", seed: " + seed);
+        RpcReadSeed(playerID, seed);
     }
 
     [ClientRpc]
-    public void RpcInitiateRPS()
+    public void RpcReadSeed(int playerID, int seed)
     {
-        inputManager.GetComponent<VisualInputManager>().GetRPSInput();
+        CardFightManager = GameObject.Find("CardFightManager");
+        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
+        if (playerID == 1 && !isServer)
+            CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
+        else if (playerID == 2 && isServer)
+            CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
+    }
+
+    [Command]
+    public void CmdInputMade(bool player, Inputs input)
+    {
+        RpcInputMade(player, input);
+    }
+
+    [ClientRpc]
+    public void RpcInputMade(bool player, Inputs input)
+    {
+        if (player != isServer)
+        {
+            inputManager.GetComponent<VisualInputManager>().inputQueue.Enqueue(input);
+        }
     }
 }

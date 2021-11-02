@@ -485,7 +485,7 @@ MonoBehaviour:
   viewButton: {fileID: 1943942115}
   PlayerBackRight: {fileID: 1229819260}
   PlayerBackMiddle: {fileID: 1415096410}
-  PlayerBackLeft: {fileID: 1825858677}
+  PlayerBackLeft: {fileID: 1843347547}
   PlayerFrontRight: {fileID: 1037567579}
   PlayerVG: {fileID: 991630240}
   PlayerFrontLeft: {fileID: 1621305007}
@@ -493,7 +493,7 @@ MonoBehaviour:
   EnemyVG: {fileID: 889390013}
   EnemyBackLeft: {fileID: 1843347547}
   EnemyBackMiddle: {fileID: 1407148754}
-  EnemyFrontRight: {fileID: 1566445822}
+  EnemyFrontRight: {fileID: 1037567579}
   EnemyBackRight: {fileID: 1043632083}
   messageBox: {fileID: 348555942}
   PlayerHand: {fileID: 2263658205007874230}
@@ -507,13 +507,8 @@ MonoBehaviour:
   playerManager: {fileID: 0}
   cardFightManager: {fileID: 0}
   count: 0
-  player1_input: -1
-  player2_input: -1
   inputSignal: -1
   numResponses: 0
-  input1: 0
-  input2: 0
-  input3: -1
   readyToContinue: 0
   min: 0
   query: 
@@ -522,6 +517,15 @@ MonoBehaviour:
   int2: 0
   string1: 
   actingPlayer: 1
+  tempIDs: 
+  tempIDs2: 
+  cardIDs: []
+  cardIDs2: []
+  strings: []
+  faceup: 
+  upright: 
+  bools: 
+  ints: 
   receivedInput: 0
   cardsAreSelectable: 0
   cardsAreHoverable: 1
@@ -529,7 +533,7 @@ MonoBehaviour:
   m_myEvent:
     m_PersistentCalls:
       m_Calls: []
-  eventSystem: {fileID: 1372285041}
+  eventSystem: {fileID: 0}
 --- !u!4 &75240893
 Transform:
   m_ObjectHideFlags: 0
@@ -1711,12 +1715,12 @@ MonoBehaviour:
   callCard: {fileID: 471906647}
   POW: {fileID: 7159240306087507326}
   SLD: {fileID: 1131213561}
-  ResetPosition: {x: 0, y: 0}
-  POWPosition: {x: 0, y: 0}
-  SLDPosition: {x: 0, y: 0}
-  YesPosition: {x: 0, y: 0}
-  NoPosition: {x: 0, y: 0}
-  TogglePosition: {x: 0, y: 0}
+  ResetPosition: {x: 10000, y: 0}
+  POWPosition: {x: -382, y: 0}
+  SLDPosition: {x: 382, y: 0}
+  YesPosition: {x: -100, y: 100}
+  NoPosition: {x: -100, y: -100}
+  TogglePosition: {x: -100, y: 0}
   AbilityBoxResetPosition: {x: 0, y: 0}
   AbilityBoxSlidePosition: {x: 0, y: 0}
 --- !u!114 &289329350 stripped
@@ -2776,11 +2780,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3131955261621354600, guid: b3567fe4c4db89a4ba952f08aa8ac0fd, type: 3}
   m_PrefabInstance: {fileID: 465305792}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &471035270 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3269910694126127815, guid: 8e18d3d760a64f4409bdde36df700a5d, type: 3}
-  m_PrefabInstance: {fileID: 3269910693791459137}
-  m_PrefabAsset: {fileID: 0}
 --- !u!224 &471035271 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 3269910694126127814, guid: 8e18d3d760a64f4409bdde36df700a5d, type: 3}
@@ -2791,7 +2790,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3269910694126127818, guid: 8e18d3d760a64f4409bdde36df700a5d, type: 3}
   m_PrefabInstance: {fileID: 3269910693791459137}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 471035270}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 434330cc057021f44af160b72b2d0bd1, type: 3}
@@ -7103,7 +7102,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1d0ced338b432949a33d1782e84f094, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CardSelect: {fileID: 471035270}
+  CardSelect: {fileID: 0}
 --- !u!114 &1541283746
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7309,11 +7308,6 @@ GameObject:
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7159240307379555184, guid: 9ec1fe9d7fdb19b49bc9383d2f364078, type: 3}
   m_PrefabInstance: {fileID: 7159240306087507325}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &1566445822 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3131955261621354601, guid: b3567fe4c4db89a4ba952f08aa8ac0fd, type: 3}
-  m_PrefabInstance: {fileID: 1078652511}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1586023235
 PrefabInstance:
@@ -7747,11 +7741,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd1732d9800a58f49bfd7ebc51df2453, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &1825858677 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3131955261621354601, guid: b3567fe4c4db89a4ba952f08aa8ac0fd, type: 3}
-  m_PrefabInstance: {fileID: 874150761}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1826322401
 GameObject:
   m_ObjectHideFlags: 0
@@ -7957,7 +7946,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a5cbb7471b5b21f478b581be543617a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  guardianCircle: {fileID: 1833686424}
+  guardianCircle: {fileID: 0}
 --- !u!224 &1843259749 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1131313023681859240, guid: ccf899444f40831428bbf0983ae5228b, type: 3}

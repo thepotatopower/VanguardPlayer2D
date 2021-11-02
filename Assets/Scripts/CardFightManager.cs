@@ -39,11 +39,12 @@ public class CardFightManager : NetworkBehaviour
     public List<IEnumerator> animations = new List<IEnumerator>();
     public List<IEnumerator> RpcCalls = new List<IEnumerator>();
     public Dictionary<int, RecordedCardValue> _recordedCardValues = new Dictionary<int, RecordedCardValue>();
+    public int testValue = -1;
 
     [SyncVar]
     public int counter;
-    public SyncList<string> player1_deck = new SyncList<string>();
-    public SyncList<string> player2_deck = new SyncList<string>();
+    public List<string> player1_deck = new List<string>();
+    public List<string> player2_deck = new List<string>();
     [SyncVar]
     public NetworkIdentity host;
     [SyncVar]
@@ -119,6 +120,10 @@ public class CardFightManager : NetworkBehaviour
                 animations.RemoveAt(0);
                 inputManager.cardsAreHoverable = true;
             }
+            if (cardFight != null && cardFight._player1 != null)
+            {
+                testValue = cardFight._player1.GetSeedsToBeRead().Count;
+            }
             yield return null;
         }
     }
@@ -153,18 +158,23 @@ public class CardFightManager : NetworkBehaviour
         return output;
     }
 
-    public void InitializeCardFight()
+    public void InitializeCardFight(List<string> player1cards, List<string> player2cards)
     {
-        List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(SyncListToList(player1_deck), SQLpath);
-        List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(SyncListToList(player2_deck), SQLpath);
+        List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(player1cards, SQLpath);
+        List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(player2cards, SQLpath);
         List<Card> tokens = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(Application.dataPath + "/../tokens.txt", LoadCode.Tokens), SQLpath);
         Debug.Log("player1 count: " + player1_generatedDeck.Count);
         Debug.Log("player2 count: " + player2_generatedDeck.Count);
         inputManager.InitializeInputManager();
-        cardFight = new VanguardEngine.CardFight();
         string luaPath = Application.dataPath + "/../lua";
+        cardFight = new VanguardEngine.CardFight();
         //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
-        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua");
+        Debug.Log("beginning cardfight initialization");
+        if (isServer)
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", 1);
+        else
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", 2);
+        Debug.Log("cardfight initialization finished");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
         cardFight._player1.OnStandUpVanguard += PerformStandUpVanguard;
@@ -194,6 +204,8 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player2.OnImprison += PerformImprison;
         cardFight._player1.OnAttackEnds += CheckIfAttackHits;
         cardFight._player2.OnAttackEnds += CheckIfAttackHits;
+        cardFight._player1.OnShuffle += SendSeed;
+        //cardFight._player2.OnShuffle += SendSeed;
         inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
         List<CardData> player1IDs = new List<CardData>();
@@ -208,8 +220,8 @@ public class CardFightManager : NetworkBehaviour
             player1IDsRide.Add(new CardData(card.tempID, card.id));
         foreach (Card card in cardFight._player2.GetRideDeck())
             player2IDsRide.Add(new CardData(card.tempID, card.id));
-        RpcInitializeDecks(player1IDs.ToArray(), player2IDs.ToArray(), player1IDsRide.ToArray(), player2IDsRide.ToArray());
-        RpcPlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
+        InitializeDecks(player1IDs.ToArray(), player2IDs.ToArray(), player1IDsRide.ToArray(), player2IDsRide.ToArray());
+        PlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
         Debug.Log("cardfight started");
     }
@@ -220,8 +232,7 @@ public class CardFightManager : NetworkBehaviour
         newThread.Start();
     }
 
-    [ClientRpc]
-    public void RpcInitializeDecks(CardData[] player1Cards, CardData[] player2Cards, CardData[] player1RideCards, CardData[] player2RideCards)
+    public void InitializeDecks(CardData[] player1Cards, CardData[] player2Cards, CardData[] player1RideCards, CardData[] player2RideCards)
     {
         CardData[] myDeck;
         CardData[] myRideDeck;
@@ -275,8 +286,34 @@ public class CardFightManager : NetworkBehaviour
         EnemyRideDeckZone.GetComponent<Pile>().UpdateVisuals(true);
     }
 
-    [ClientRpc]
-    public void RpcPlaceStarter(string cardID1, int tempID1, string cardID2, int tempID2)
+    public void SendSeed(object sender, CardEventArgs e)
+    {
+        Debug.Log("sending seed, playerID: " + e.playerID + ", seed: " + e.i);
+        IEnumerator Dialog()
+        {
+            playerManager.CmdShuffleSeed(e.playerID, e.i);
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
+    }
+
+    public void ReadSeed(int playerID, int seed)
+    {
+        if ((isServer && playerID == 2) || (!isServer && playerID == 1))
+        {
+            IEnumerator Dialog()
+            {
+                Debug.Log("reading seed, playerID: " + playerID + ", seed: " + seed);
+                cardFight._player1.ReadSeed(seed);
+                Debug.Log("seed read");
+                inAnimation = false;
+                yield return null;
+            }
+            animations.Add(Dialog());
+        }
+    }
+
+    public void PlaceStarter(string cardID1, int tempID1, string cardID2, int tempID2)
     {
         Card card1 = LookUpCard(cardID1);
         Card card2 = LookUpCard(cardID2);
@@ -330,14 +367,13 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card.id, e.card.tempID, e.card.originalOwner, grade, soul, critical, faceup, upright);
+            ChangeZone(e.previousLocation.Item1, e.previousLocation.Item2, e.currentLocation.Item1, e.currentLocation.Item2, e.card.id, e.card.tempID, e.card.originalOwner, grade, soul, critical, faceup, upright);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangeZone(int previousLocation, int previousFL, int currentLocation, int currentFL, string cardID, int tempID, int originalOwner, int grade, int soul, int critical, bool faceup, bool upright)
+    public void ChangeZone(int previousLocation, int previousFL, int currentLocation, int currentFL, string cardID, int tempID, int originalOwner, int grade, int soul, int critical, bool faceup, bool upright)
     {
         animations.Add(ChangeZoneRoutine(previousLocation, previousFL, currentLocation, currentFL, cardID, tempID, originalOwner, grade, soul, critical, faceup, upright));
     }
@@ -791,14 +827,13 @@ public class CardFightManager : NetworkBehaviour
             return;
         IEnumerator Dialog()
         {
-            RpcSwapZone(e.previousLocation.Item2, e.currentLocation.Item2);
+            SwapZone(e.previousLocation.Item2, e.currentLocation.Item2);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcSwapZone(int previousFL, int currentFL)
+    public void SwapZone(int previousFL, int currentFL)
     {
         animations.Add(ChangeZoneRoutine(previousFL, currentFL));
     }
@@ -846,14 +881,13 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log("ShowAbilityActivated");
         IEnumerator Dialog()
         {
-            RpcShowAbilityActivated(e.card.tempID, e.card.id, e.card.name);
+            ShowAbilityActivated(e.card.tempID, e.card.id, e.card.name);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcShowAbilityActivated(int tempID, string cardID, string name)
+    public void ShowAbilityActivated(int tempID, string cardID, string name)
     {
         animations.Add(ShowAbilityActivatedRoutine(tempID, cardID, name));
     }
@@ -969,14 +1003,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcStandUpVanguard();
+            StandUpVanguard();
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcStandUpVanguard()
+    public void StandUpVanguard()
     {
         animations.Add(WaitForFlip());
     }
@@ -1001,7 +1034,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Draw, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Draw, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1017,7 +1050,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Stand, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Stand, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1037,7 +1070,7 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("their turn");
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Ride, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Ride, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1053,7 +1086,7 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Main, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Main, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1069,14 +1102,13 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangePhase(Phase.Battle, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Battle, cardFight._actingPlayer._playerID, cardFight._turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangePhase(int phase, int actingPlayer, int turn)
+    public void ChangePhase(int phase, int actingPlayer, int turn)
     {
         if ((actingPlayer == 1 && isServer) || (actingPlayer == 2 && !isServer))
             animations.Add(WaitForPhase(phase, true, turn));
@@ -1105,15 +1137,14 @@ public class CardFightManager : NetworkBehaviour
         {
             IEnumerator Dialog()
             {
-                RpcPerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(card), booster);
+                PerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(card), booster);
                 yield return null;
             }
             RpcCalls.Add(Dialog());
         }
     }
 
-    [ClientRpc]
-    public void RpcPerformAttack(int attackingCircle, int attackedCircle, int booster)
+    public void PerformAttack(int attackingCircle, int attackedCircle, int booster)
     {
         _attacker = attackingCircle;
         _attacked.Add(attackedCircle);
@@ -1188,14 +1219,13 @@ public class CardFightManager : NetworkBehaviour
         }
         IEnumerator Dialog()
         {
-            RpcChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
+            ChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangeUpRight(int circle, bool upright)
+    public void ChangeUpRight(int circle, bool upright)
     {
         animations.Add(RotateUnit(circle, upright));
     }
@@ -1220,14 +1250,13 @@ public class CardFightManager : NetworkBehaviour
         Player player = sender as Player;
         IEnumerator Dialog()
         {
-            RpcChangeFaceUp(e.i, e.faceup);
+            ChangeFaceUp(e.i, e.faceup);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangeFaceUp(int tempID, bool faceup)
+    public void ChangeFaceUp(int tempID, bool faceup)
     {
         animations.Add(Flip(tempID, faceup));
     }
@@ -1269,14 +1298,13 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log("updating shield value: " + e.currentShield);
         IEnumerator Dialog()
         {
-            RpcChangeShieldValue(e.circle, e.currentShield);
+            ChangeShieldValue(e.circle, e.currentShield);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangeShieldValue(int circle, int shield)
+    public void ChangeShieldValue(int circle, int shield)
     {
         if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
             animations.Add(UpdateShieldValue(circle, shield));
@@ -1301,15 +1329,14 @@ public class CardFightManager : NetworkBehaviour
         {
             IEnumerator Dialog()
             {
-                RpcChangeUnitValue(e.circle, e.currentPower, e.currentCritical);
+                ChangeUnitValue(e.circle, e.currentPower, e.currentCritical);
                 yield return null;
             }
             RpcCalls.Add(Dialog());
         }
     }
 
-    [ClientRpc]
-    public void RpcChangeUnitValue(int circle, int power, int critical)
+    public void ChangeUnitValue(int circle, int power, int critical)
     {
         if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
             animations.Add(UpdateUnitValue(circle, power, critical));
@@ -1330,14 +1357,13 @@ public class CardFightManager : NetworkBehaviour
         Player player = sender as Player;
         IEnumerator Dialog()
         {
-            RpcChangeCardValue(e.i, e.currentGrade);
+            ChangeCardValue(e.i, e.currentGrade);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcChangeCardValue(int tempID, int currentGrade)
+    public void ChangeCardValue(int tempID, int currentGrade)
     {
         animations.Add(UpdateCardValue(tempID, currentGrade));
     }
@@ -1357,14 +1383,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcCheckIfAttackHits();
+            CheckIfAttackHits();
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcCheckIfAttackHits()
+    public void CheckIfAttackHits()
     {
         animations.Add(CheckIfAttackHitsAnimation());
     }
@@ -1383,14 +1408,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcPerformReveal(e.card.tempID, e.card.id, e.card.originalOwner, e.currentLocation.Item1);
+            PerformReveal(e.card.tempID, e.card.id, e.card.originalOwner, e.currentLocation.Item1);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcPerformReveal(int tempID, string cardID, int playerID, int location)
+    public void PerformReveal(int tempID, string cardID, int playerID, int location)
     {
         animations.Add(Reveal(tempID, cardID, playerID, location));
     }
@@ -1447,14 +1471,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcSetPrison(e.playerID);
+            SetPrison(e.playerID);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcSetPrison(int playerID)
+    public void SetPrison(int playerID)
     {
         IEnumerator Dialog()
         {
@@ -1472,14 +1495,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcPerformImprison(e.playerID);
+            PerformImprison(e.playerID);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcPerformImprison(int playerID)
+    public void PerformImprison(int playerID)
     {
         IEnumerator Dialog()
         {
@@ -1497,14 +1519,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcPerformFree(e.playerID);
+            PerformFree(e.playerID);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcPerformFree(int playerID)
+    public void PerformFree(int playerID)
     {
         IEnumerator Dialog()
         {
@@ -1522,14 +1543,13 @@ public class CardFightManager : NetworkBehaviour
     {
         IEnumerator Dialog()
         {
-            RpcPerformChosen(e.card.id, e.card.tempID);
+            PerformChosen(e.card.id, e.card.tempID);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    [ClientRpc]
-    public void RpcPerformChosen(string cardID, int tempID)
+    public void PerformChosen(string cardID, int tempID)
     {
         if (cardID == null)
         {

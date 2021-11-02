@@ -48,22 +48,17 @@ public class VisualInputManager : NetworkBehaviour
     public Thread currentThread;
     public PlayerManager playerManager;
     public CardFightManager cardFightManager;
+    public Queue<Inputs> inputQueue = new Queue<Inputs>();
     [SyncVar]
     public int count = 0;
-    [SyncVar]
-    public int player1_input = -1;
-    [SyncVar]
-    public int player2_input = -1;
+    //[SyncVar]
+    //public int player1_input = -1;
+    //[SyncVar]
+    //public int player2_input = -1;
     //[SyncVar(hook = nameof(OnInputSignalChanged))]
     public int inputSignal = -1;
     [SyncVar]
     public int numResponses = 0;
-    [SyncVar]
-    public int input1 = -1;
-    [SyncVar]
-    public int input2 = -1;
-    [SyncVar]
-    public int input3 = -1;
     [SyncVar]
     public bool readyToContinue = false;
     [SyncVar]
@@ -80,16 +75,15 @@ public class VisualInputManager : NetworkBehaviour
     public string string1 = "";
     [SyncVar]
     public int actingPlayer = 1;
-    public SyncList<int> inputs = new SyncList<int>();
-    public SyncList<int> tempIDs = new SyncList<int>();
-    public SyncList<int> tempIDs2 = new SyncList<int>();
-    public SyncList<string> cardIDs = new SyncList<string>();
-    public SyncList<string> cardIDs2 = new SyncList<string>();
-    public SyncList<string> strings = new SyncList<string>();
-    public SyncList<bool> faceup = new SyncList<bool>();
-    public SyncList<bool> upright = new SyncList<bool>();
-    public SyncList<bool> bools = new SyncList<bool>();
-    public SyncList<int> ints = new SyncList<int>();
+    public List<int> tempIDs = new List<int>();
+    public List<int> tempIDs2 = new List<int>();
+    public List<string> cardIDs = new List<string>();
+    public List<string> cardIDs2 = new List<string>();
+    public List<string> strings = new List<string>();
+    public List<bool> faceup = new List<bool>();
+    public List<bool> upright = new List<bool>();
+    public List<bool> bools = new List<bool>();
+    public List<int> ints = new List<int>();
     public bool receivedInput = false;
     public bool cardsAreSelectable = false;
     public bool cardsAreHoverable = true;
@@ -134,25 +128,28 @@ public class VisualInputManager : NetworkBehaviour
         protected override void RPS_Input()
         {
             Debug.Log("RPS_Input started");
-            if (inputManager.player1_input >= 0 && inputManager.player2_input >= 0)
-            {
-                int_input = inputManager.player2_input;
-                Debug.Log("second RPS input: " + int_input.ToString());
-                inputSignal = InputType.ResolveRPS;
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                oSignalEvent.Set();
-            }
-            else
-            {
-                inputSignal = InputType.RPS;
-                Debug.Log(inputManager.readyToContinue);
-                while (!inputManager.readyToContinue) ;
-                inputManager.readyToContinue = false;
-                int_input = inputManager.player1_input;
-                Debug.Log("first RPS input: " + int_input.ToString());
-                oSignalEvent.Set();
-            }
+            inputSignal = InputType.RPS;
+            WaitForReadyToContinue();
+            inputActive = false;
+            //if (inputManager.player1_input >= 0 && inputManager.player2_input >= 0)
+            //{
+            //    int_input = inputManager.player2_input;
+            //    Debug.Log("second RPS input: " + int_input.ToString());
+            //    inputSignal = InputType.ResolveRPS;
+            //    while (!inputManager.readyToContinue) ;
+            //    inputManager.readyToContinue = false;
+            //    oSignalEvent.Set();
+            //}
+            //else
+            //{
+            //    inputSignal = InputType.RPS;
+            //    Debug.Log(inputManager.readyToContinue);
+            //    while (!inputManager.readyToContinue) ;
+            //    inputManager.readyToContinue = false;
+            //    int_input = inputManager.player1_input;
+            //    Debug.Log("first RPS input: " + int_input.ToString());
+            //    oSignalEvent.Set();
+            //}
         }
 
         protected override void YesNo_Input()
@@ -164,16 +161,7 @@ public class VisualInputManager : NetworkBehaviour
             _query = string_input;
             if (string_input == "Boost?")
                 int_value = _actingPlayer.GetBooster(_actingPlayer.GetAttacker().tempID);
-            while (!inputManager.readyToContinue) ;
-            inputManager.readyToContinue = false;
-            if (inputManager.player1_input == 0)
-                bool_input = true;
-            else
-                bool_input = false;
-            Debug.Log("selection made: " + int_input);
-            inputSignal = InputType.Reset;
-            while (!inputManager.readyToContinue) ;
-            inputManager.readyToContinue = false;
+            WaitForReadyToContinue();
             inputActive = false;
         }
 
@@ -184,14 +172,7 @@ public class VisualInputManager : NetworkBehaviour
             inputActive = true;
             intlist_input.Clear();
             inputSignal = InputType.Mulligan;
-            while (!inputManager.readyToContinue) ;
-            inputManager.readyToContinue = false;
-            foreach (int input in inputManager.inputs)
-                intlist_input.Add(input);
-            inputManager.inputs.Clear();
-            inputSignal = InputType.Reset;
-            while (!inputManager.readyToContinue) ;
-            inputManager.readyToContinue = false;
+            WaitForReadyToContinue();
             inputActive = false;
         }
 
@@ -536,14 +517,18 @@ public class VisualInputManager : NetworkBehaviour
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             intlist_input.Clear();
-            foreach (int input in inputManager.inputs)
+            Inputs currentInput = inputManager.inputQueue.Dequeue();
+            foreach (int input in currentInput.inputs)
                 intlist_input.Add(input);
-            Debug.Log("received input 1: " + inputManager.input1);
-            Debug.Log("received input 2: " + inputManager.input2);
-            int_input = inputManager.input1;
-            int_input2 = inputManager.input2;
-            inputManager.inputs.Clear();
-            Thread.Sleep(30 / 1000);
+            Debug.Log("received input 1: " + currentInput.input1);
+            Debug.Log("received input 2: " + currentInput.input2);
+            int_input = currentInput.input1;
+            int_input2 = currentInput.input2;
+            if (currentInput.input1 == 0)
+                bool_input = false;
+            else
+                bool_input = true;
+            //Thread.Sleep(30 / 1000);
             inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
@@ -610,7 +595,7 @@ public class VisualInputManager : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (isServer && Thread.CurrentThread == currentThread && inputManager != null && inputManager.inputSignal > 0)
+        if (Thread.CurrentThread == currentThread && inputManager != null && inputManager.inputSignal > 0)
         {
             int newSignal = inputManager.inputSignal;
             inputManager.inputSignal = 0;
@@ -649,7 +634,7 @@ public class VisualInputManager : NetworkBehaviour
             foreach (bool b in inputManager._bools)
                 bools.Add(b);
             actingPlayer = inputManager._actingPlayer._playerID;
-            RpcUpdateInputSignal(newSignal);
+            UpdateInputSignal(newSignal);
         }
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
         {
@@ -662,7 +647,8 @@ public class VisualInputManager : NetworkBehaviour
                 {
                     case InputType.RPS:
                         Debug.Log("getting RPS");
-                        GetRPSInput();
+                        currentRoutine = RPSInput();
+                        StartCoroutine(currentRoutine);
                         break;
                     case InputType.ResolveRPS:
                         ResolveRPS();
@@ -747,8 +733,7 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    public void RpcUpdateInputSignal(int newInputSignal)
+    public void UpdateInputSignal(int newInputSignal)
     {
         IEnumerator Dialog()
         {
@@ -760,12 +745,6 @@ public class VisualInputManager : NetworkBehaviour
             receivedInput = false;
         }
         StartCoroutine(Dialog());
-    }
-
-    public void OnInputSignalChanged(int oldInputSignal, int newInputSignal)
-    {
-        Debug.Log("old input signal: " + oldInputSignal);
-        Debug.Log("new input signal: " + newInputSignal);
     }
 
     public bool isActingPlayer()
@@ -811,11 +790,6 @@ public class VisualInputManager : NetworkBehaviour
         if (currentRoutine != null)
             StopCoroutine(currentRoutine);
         currentRoutine = null;
-        player1_input = -1;
-        player2_input = -1;
-        input1 = 0;
-        input2 = 0;
-        input3 = 0;
         bool1 = false;
         clicked = false;
         if (waitForButton != null)
@@ -834,14 +808,15 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
             Debug.Log("host resetting");
-            playerManager.CmdChangeInput(1, -1);
+            //playerManager.CmdChangeInput(1, -1);
         }
         else
         {
             yield return null;
             Debug.Log("remote resetting");
-            playerManager.CmdChangeInput(2, -1);
+            //playerManager.CmdChangeInput(2, -1);
         }
+        readyToContinue = true;
         yield return null;
     }
 
@@ -853,14 +828,16 @@ public class VisualInputManager : NetworkBehaviour
         return inputManager;
     }
 
-    public void GetRPSInput()
+    IEnumerator RPSInput()
     {
-        rockButton.transform.localPosition = new Vector3(-175, 0, 0);
-        paperButton.transform.localPosition = new Vector3(0, 0, 0);
-        scissorsButton.transform.localPosition = new Vector3(175, 0, 0);
-        int selection = -1;
-        IEnumerator Dialog()
+        while (cardFightManager.InAnimation())
+            yield return null;
+        if (isActingPlayer())
         {
+            rockButton.transform.localPosition = new Vector3(-175, 0, 0);
+            paperButton.transform.localPosition = new Vector3(0, 0, 0);
+            scissorsButton.transform.localPosition = new Vector3(175, 0, 0);
+            int selection = -1;
             var waitForButton = new WaitForUIButtons(rockButton, scissorsButton, paperButton);
             while (selection < 0)
             {
@@ -873,13 +850,26 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
-            OnRPSSelection(selection);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            OnRPSSelection();
         }
-        Debug.Log("waiting for button");
-        StartCoroutine(Dialog());
+        else
+        {
+            messageBox.transform.localPosition = new Vector3(0, 0, 0);
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            OnRPSSelection();
+        }
+        //Debug.Log("waiting for button");
     }
 
-    public void OnRPSSelection(int selection)
+    public void OnRPSSelection()
     {
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
@@ -887,16 +877,17 @@ public class VisualInputManager : NetworkBehaviour
         paperButton.transform.position = new Vector3(10000, 0, 0);
         scissorsButton.transform.position = new Vector3(10000, 0, 0);
         messageBox.transform.localPosition = new Vector3(0, 0, 0);
-        if (isServer)
-        {
-            Debug.Log("player 1 made selection " + selection.ToString());
-            playerManager.CmdChangeInput(1, selection);
-        }
-        else
-        {
-            Debug.Log("player 2 made selection " + selection.ToString());
-            playerManager.CmdChangeInput(2, selection);
-        }
+        readyToContinue = true;
+        //if (isServer)
+        //{
+        //    Debug.Log("player 1 made selection " + selection.ToString());
+        //    playerManager.CmdChangeInput(1, selection);
+        //}
+        //else
+        //{
+        //    Debug.Log("player 2 made selection " + selection.ToString());
+        //    playerManager.CmdChangeInput(2, selection);
+        //}
     }
 
     public void ResolveRPS()
@@ -906,57 +897,61 @@ public class VisualInputManager : NetworkBehaviour
         Button player_selection;
         Button enemy_selection;
         messageBox.transform.position = new Vector3(10000, 0, 0);
-        if (isServer)
-        {
-            if (player1_input == 0)
-                player_selection = rockButton;
-            else if (player1_input == 1)
-                player_selection = paperButton;
-            else
-                player_selection = scissorsButton;
-            if (player2_input == 0)
-                enemy_selection = rockButton;
-            else if (player2_input == 1)
-                enemy_selection = paperButton;
-            else
-                enemy_selection = scissorsButton;
-        }
-        else
-        {
-            if (player2_input == 0)
-                player_selection = rockButton;
-            else if (player2_input == 1)
-                player_selection = paperButton;
-            else
-                player_selection = scissorsButton;
-            if (player1_input == 0)
-                enemy_selection = rockButton;
-            else if (player1_input == 1)
-                enemy_selection = paperButton;
-            else
-                enemy_selection = scissorsButton;
-        }
-        player_selection.transform.localPosition = new Vector3(0, -100, 0);
-        enemy_selection.transform.localPosition = new Vector3(0, 100, 0);
-        IEnumerator MoveTowards()
-        {
-            while (player_selection.transform.localPosition != new Vector3(0, -50, 0) && enemy_selection.transform.localPosition != new Vector3(0, 50, 0))
-            {
-                float step = 50 * Time.deltaTime;
-                player_selection.transform.localPosition = Vector3.MoveTowards(player_selection.transform.localPosition, new Vector3(0, -50, 0), step);
-                enemy_selection.transform.localPosition = Vector3.MoveTowards(enemy_selection.transform.localPosition, new Vector3(0, 50, 0), step);
-                if (Vector3.Distance(player_selection.transform.localPosition, new Vector3(0, -50, 0)) < 1)
-                    break;
-                yield return null;
-            }
-            yield return new WaitForSeconds(1);
-            StartCoroutine(ResetInputs());
-        }
-        StartCoroutine(MoveTowards());
+        //if (isServer)
+        //{
+        //    if (player1_input == 0)
+        //        player_selection = rockButton;
+        //    else if (player1_input == 1)
+        //        player_selection = paperButton;
+        //    else
+        //        player_selection = scissorsButton;
+        //    if (player2_input == 0)
+        //        enemy_selection = rockButton;
+        //    else if (player2_input == 1)
+        //        enemy_selection = paperButton;
+        //    else
+        //        enemy_selection = scissorsButton;
+        //}
+        //else
+        //{
+        //    if (player2_input == 0)
+        //        player_selection = rockButton;
+        //    else if (player2_input == 1)
+        //        player_selection = paperButton;
+        //    else
+        //        player_selection = scissorsButton;
+        //    if (player1_input == 0)
+        //        enemy_selection = rockButton;
+        //    else if (player1_input == 1)
+        //        enemy_selection = paperButton;
+        //    else
+        //        enemy_selection = scissorsButton;
+        //}
+        //player_selection.transform.localPosition = new Vector3(0, -100, 0);
+        //enemy_selection.transform.localPosition = new Vector3(0, 100, 0);
+        //IEnumerator MoveTowards()
+        //{
+        //    while (player_selection.transform.localPosition != new Vector3(0, -50, 0) && enemy_selection.transform.localPosition != new Vector3(0, 50, 0))
+        //    {
+        //        float step = 50 * Time.deltaTime;
+        //        player_selection.transform.localPosition = Vector3.MoveTowards(player_selection.transform.localPosition, new Vector3(0, -50, 0), step);
+        //        enemy_selection.transform.localPosition = Vector3.MoveTowards(enemy_selection.transform.localPosition, new Vector3(0, 50, 0), step);
+        //        if (Vector3.Distance(player_selection.transform.localPosition, new Vector3(0, -50, 0)) < 1)
+        //            break;
+        //        yield return null;
+        //    }
+        //    yield return new WaitForSeconds(1);
+        //    StartCoroutine(ResetInputs());
+        //}
+        //StartCoroutine(MoveTowards());
     }
 
     IEnumerator Mulligan()
     {
+        int selection = -1;
+        List<int> selections = new List<int>();
+        NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+        CardBehavior card;
         while (cardFightManager.InAnimation())
         {
             yield return null;
@@ -968,7 +963,6 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select cards to mulligan.";
             mulliganButton.transform.localPosition = new Vector3(0, -110, 0);
             cardsAreSelectable = true;
-            int selection = -1;
             waitForButton = new WaitForUIButtons(mulliganButton);
             Debug.Log("waiting for button");
             while (selection < 0)
@@ -977,19 +971,33 @@ public class VisualInputManager : NetworkBehaviour
                     selection = 0;
                 yield return null;
             }
-            while (!NetworkClient.ready)
-                yield return null;
-            OnMulliganSelection(selection);
+            mulliganButton.transform.position = new Vector3(10000, 0, 0);
+            for (int i = 0; i < PlayerHand.transform.childCount; i++)
+            {
+                card = PlayerHand.transform.GetChild(i).gameObject.GetComponent<CardBehavior>();
+                if (card.selected)
+                    selections.Add(int.Parse(card.gameObject.name));
+            }
+            Inputs newInput = new Inputs();
+            newInput.inputs.AddRange(selections);
+            playerManager = networkIdentity.GetComponent<PlayerManager>();
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
     IEnumerator YesNo()
     {
+        int selection = -1;
         while (cardFightManager.InAnimation())
         {
             yield return null;
@@ -1001,13 +1009,12 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = query;
             yesButton.transform.localPosition = new Vector3(-120, -110, 0);
             noButton.transform.localPosition = new Vector3(120, -110, 0);
-            int selection = -1;
             waitForButton = new WaitForUIButtons(yesButton, noButton);
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == yesButton)
                 {
-                    selection = 0;
+                    selection = 1;
                     if (query == "Boost?")
                     {
                         Debug.Log("booster circle: " + int1);
@@ -1016,7 +1023,7 @@ public class VisualInputManager : NetworkBehaviour
                     }
                 }
                 else if (waitForButton.PressedButton == noButton)
-                    selection = 1;
+                    selection = 0;
                 yield return null;
             }
             waitForButton.Reset();
@@ -1024,19 +1031,29 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInput(selection);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
             toggle.transform.localPosition = Globals.Instance.TogglePosition;
+            while (inputQueue.Count < 1)
+            {
+                yield return null;
+            }
+            readyToContinue = true;
         }
     }
 
     IEnumerator SelectFromList()
     {
         Card card;
+        List<int> selections = new List<int>();
         while (cardFightManager.InAnimation())
         {
             yield return null;
@@ -1067,22 +1084,34 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
+            selections.AddRange(cardSelect.selected);
             while (!NetworkClient.ready)
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdChangeInputs(cardSelect.selected);
+            Inputs newInput = new Inputs();
+            newInput.inputs.AddRange(selections);
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            toggle.transform.localPosition = Globals.Instance.TogglePosition;
+            while (inputQueue.Count < 1)
+            {
+                yield return null;
+            }
+            readyToContinue = true;
         }
     }
 
     IEnumerator SelectAbility()
     {
         Card card;
+        int selection = -1;
         while (cardFightManager.InAnimation())
         {
             yield return null;
@@ -1102,7 +1131,6 @@ public class VisualInputManager : NetworkBehaviour
                 card = cardFightManager.LookUpCard(cardIDs[i]);
                 cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, bools[i], strings[i]);
             }
-            int selection = -1;
             waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
             while (selection < 0)
             {
@@ -1113,19 +1141,30 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
+            if (selection == 0)
+                selection = tempIDs.IndexOf(cardSelect.selected[0]);
+            else if (selection == 1)
+                selection = tempIDs.Count;
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
             while (!NetworkClient.ready)
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            if (selection == 0)
-                playerManager.CmdSingleInput(tempIDs.IndexOf(cardSelect.selected[0]));
-            else if (selection == 1)
-                playerManager.CmdSingleInput(tempIDs.Count);
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            toggle.transform.localPosition = Globals.Instance.TogglePosition;
+            while (inputQueue.Count < 1)
+            {
+                yield return null;
+            }
+            readyToContinue = true;
         }
     }
 
@@ -1174,12 +1213,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1274,12 +1321,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1326,12 +1381,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1357,12 +1420,19 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInput(selectedUnit);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selectedUnit;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1414,12 +1484,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1481,12 +1559,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1529,12 +1615,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1577,12 +1671,20 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdSingleInputs(selection, selection2);
+            Inputs newInput = new Inputs();
+            newInput.input1 = selection;
+            newInput.input2 = selection2;
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
+            while (inputQueue.Count < 1)
+                yield return null;
+            readyToContinue = true;
         }
     }
 
@@ -1630,57 +1732,40 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdChangeInputs(selectedCircles);
+            Inputs newInput = new Inputs();
+            newInput.inputs.AddRange(selectedCircles);
+            playerManager.CmdInputMade(isServer, newInput);
+            inputQueue.Enqueue(newInput);
+            readyToContinue = true;
         }
         else
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
-        }
-    }
-
-    public void OnMulliganSelection(int selection)
-    {
-        NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-        CardBehavior card;
-        List<int> selections = new List<int>();
-        playerManager = networkIdentity.GetComponent<PlayerManager>();
-        mulliganButton.transform.position = new Vector3(10000, 0, 0);
-        for (int i = 0; i < PlayerHand.transform.childCount; i++)
-        {
-            card = PlayerHand.transform.GetChild(i).gameObject.GetComponent<CardBehavior>();
-            if (card.selected)
-                selections.Add(int.Parse(card.gameObject.name));
-        }
-        playerManager.CmdChangeInputs(selections);
-        if (isServer)
-        {
-            Debug.Log("player 1 made selection " + selection.ToString());
-        }
-        else
-        {
-            Debug.Log("player 2 made selection " + selection.ToString());
-        }
-    }
-
-    public void ResetReceive()
-    {
-        IEnumerator Dialog()
-        {
-            inputSignal = 0;
-            Debug.Log("changed to false");
-            while (!NetworkClient.ready)
-            {
-                Debug.Log("not ready");
+            while (inputQueue.Count < 1)
                 yield return null;
-            }
-            NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-            playerManager = networkIdentity.GetComponent<PlayerManager>();
-            Debug.Log("starting CmdReady");
-            playerManager.CmdReady();
+            readyToContinue = true;
         }
-        StartCoroutine(Dialog());
     }
+
+    //public void ResetReceive()
+    //{
+    //    IEnumerator Dialog()
+    //    {
+    //        inputSignal = 0;
+    //        Debug.Log("changed to false");
+    //        while (!NetworkClient.ready)
+    //        {
+    //            Debug.Log("not ready");
+    //            yield return null;
+    //        }
+    //        NetworkIdentity networkIdentity = NetworkClient.connection.identity;
+    //        playerManager = networkIdentity.GetComponent<PlayerManager>();
+    //        Debug.Log("starting CmdReady");
+    //        playerManager.CmdReady();
+    //    }
+    //    StartCoroutine(Dialog());
+    //}
 
     public void ResetMiscellaneousButtons()
     {
@@ -1949,4 +2034,12 @@ public class VisualInputManager : NetworkBehaviour
         ResetMiscellaneousButtons();
         miscellaneousButtons.Clear();
     }
+}
+
+public class Inputs
+{
+    public int input1 = -1;
+    public int input2 = -1;
+    public int input3 = -1;
+    public List<int> inputs = new List<int>();
 }
