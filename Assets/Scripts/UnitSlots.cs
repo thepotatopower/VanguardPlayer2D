@@ -75,6 +75,17 @@ public class UnitSlots : MonoBehaviour
         return null;
     }
 
+    public List<GameObject> GetUnitSlots()
+    {
+        List<GameObject> slots = new List<GameObject>();
+        for (int i = 0; i < _unitSlots.Length; i++)
+        {
+            if (_unitSlots[i] != null)
+                slots.Add(_unitSlots[i]);
+        }
+        return slots;
+    }
+
     public void SwapUnitSlots(int previousFL, int currentFL)
     {
         CardFightManager cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();

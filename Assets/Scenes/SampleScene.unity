@@ -533,7 +533,7 @@ MonoBehaviour:
   m_myEvent:
     m_PersistentCalls:
       m_Calls: []
-  eventSystem: {fileID: 0}
+  eventSystem: {fileID: 1372285041}
 --- !u!4 &75240893
 Transform:
   m_ObjectHideFlags: 0

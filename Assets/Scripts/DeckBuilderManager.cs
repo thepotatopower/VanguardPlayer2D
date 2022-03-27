@@ -99,7 +99,7 @@ public class DeckBuilderManager : MonoBehaviour
     {
         if (currentCoroutine != null)
             StopCoroutine(currentCoroutine);
-        string query = "SELECT * FROM data";
+        string query = "SELECT * FROM data JOIN text USING (id)";
         if (NationDropdown.value != 0)
         {
             if (!query.Contains("WHERE"))
@@ -130,6 +130,7 @@ public class DeckBuilderManager : MonoBehaviour
         }
         if (NameInput.text != "")
         {
+            //query += " UNION SELECT * FROM text WHERE name LIKE '%" + NameInput.text + "%'";
             if (!query.Contains("WHERE"))
                 query += " WHERE";
             else

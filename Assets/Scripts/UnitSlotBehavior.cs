@@ -35,6 +35,11 @@ public class UnitSlotBehavior : MonoBehaviour
     {
         if (showStats)
         {
+            if (Globals.Instance.cardFightManager._recordedUnitValues.ContainsKey(_FL))
+            {
+                _power = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentPower;
+                _critical = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentCritical;
+            }
             Power.text = _power.ToString();
             if (_power > _originalPower)
                 Power.color = Color.cyan;
@@ -132,7 +137,7 @@ public class UnitSlotBehavior : MonoBehaviour
     public GameObject RemoveCard(int tempID)
     {
         GameObject removedCard = null;
-        if (tempID == Int32.Parse(unit.name) && unit != null)
+        if (unit != null && tempID == Int32.Parse(unit.name))
         {
             showStats = false;
             Debug.Log("UnitSlotBehavior is removing " + tempID.ToString());

@@ -39,6 +39,8 @@ public class CardFightManager : NetworkBehaviour
     public List<IEnumerator> animations = new List<IEnumerator>();
     public List<IEnumerator> RpcCalls = new List<IEnumerator>();
     public Dictionary<int, RecordedCardValue> _recordedCardValues = new Dictionary<int, RecordedCardValue>();
+    public Dictionary<int, RecordedUnitValue> _recordedUnitValues = new Dictionary<int, RecordedUnitValue>();
+    public Dictionary<int, int> _recordedShieldValues = new Dictionary<int, int>();
     public int testValue = -1;
 
     [SyncVar]
@@ -85,7 +87,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/kairi_variant.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/nirvana.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -166,14 +168,18 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log("player1 count: " + player1_generatedDeck.Count);
         Debug.Log("player2 count: " + player2_generatedDeck.Count);
         inputManager.InitializeInputManager();
-        string luaPath = Application.dataPath + "/../lua";
+        //string luaPath = Application.dataPath + "/../lua";
+        string luaPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua";
         cardFight = new VanguardEngine.CardFight();
+        cardFight.SetInitialDamage(0);
+        cardFight.SetInitialSoul(0);
+        cardFight.SetInitialDrop(0);
         //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
         Debug.Log("beginning cardfight initialization");
         if (isServer)
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", 1);
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", "Data Source=./cards.db;Version=3;", 1);
         else
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", 2);
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua", "Data Source=./cards.db;Version=3;", 2);
         Debug.Log("cardfight initialization finished");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
@@ -499,9 +505,9 @@ public class CardFightManager : NetworkBehaviour
                 else
                     zone = Globals.Instance.enemyDamageZone;
             }
-            else if (location == Location.Soul)
+            else if (location == Location.Soul || location == Location.originalDress)
             {
-                Debug.Log("soul here");
+                Debug.Log("soul/oD here");
                 zone = Globals.Instance.unitSlots.GetUnitSlot(FL);
             }
             else if (location == Location.OrderArea)
@@ -557,7 +563,7 @@ public class CardFightManager : NetworkBehaviour
                 currentZone = zone;
         }
 
-        if (previousLocation == Location.Soul)
+        if (previousLocation == Location.Soul || previousLocation == Location.originalDress)
         {
             if (Globals.Instance.unitSlots.GetUnitSlot(previousFL) != null)
             {
@@ -569,7 +575,7 @@ public class CardFightManager : NetworkBehaviour
                 previousZone = Globals.Instance.guardianCircle.gameObject;
             }
         }
-        if (currentLocation == Location.Soul)
+        if (currentLocation == Location.Soul || currentLocation == Location.originalDress)
         {
             bool addToSoul = true;
             if (Globals.Instance.unitSlots.GetUnitSlot(currentFL) == null)
@@ -785,9 +791,16 @@ public class CardFightManager : NetworkBehaviour
                     yield return null;
             }
         }
-        else if (currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul)
+        else if (currentZone.GetComponent<UnitSlotBehavior>() != null && currentLocation != Location.Soul && currentLocation != Location.originalDress)
         {
-            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), critical, card.power, card.power, upright, true, card.id, newCard);
+            int currentPower = card.power;
+            int currentCritical = card.critical;
+            if (_recordedUnitValues.ContainsKey(FL))
+            {
+                currentPower = _recordedUnitValues[FL].currentPower;
+                currentCritical = _recordedUnitValues[FL].currentCritical;
+            }
+            currentZone.GetComponent<UnitSlotBehavior>().AddCard(card.OriginalGrade(), currentCritical, currentPower, card.power, upright, true, card.id, newCard);
         }
         else if (currentZone.GetComponent<GuardianCircle>() != null)
             currentZone.GetComponent<GuardianCircle>().AddCard(newCard, card.tempID);
@@ -1294,8 +1307,8 @@ public class CardFightManager : NetworkBehaviour
 
     public void ChangeShieldValue(object sender, CardEventArgs e)
     {
-        Player player = sender as Player;
-        Debug.Log("updating shield value: " + e.currentShield);
+        //Player player = sender as Player;
+        //Debug.Log("updating shield value: " + e.currentShield);
         IEnumerator Dialog()
         {
             ChangeShieldValue(e.circle, e.currentShield);
@@ -1306,14 +1319,12 @@ public class CardFightManager : NetworkBehaviour
 
     public void ChangeShieldValue(int circle, int shield)
     {
-        if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
-            animations.Add(UpdateShieldValue(circle, shield));
-        else
-            Debug.Log("invalid circle: " + circle);
+        animations.Add(UpdateShieldValue(circle, shield));
     }
 
     IEnumerator UpdateShieldValue(int circle, int shield)
     {
+        _recordedShieldValues[circle] = shield;
         UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._shield = shield;
         inAnimation = false;
         yield return null;
@@ -1321,33 +1332,46 @@ public class CardFightManager : NetworkBehaviour
 
     public void ChangeUnitValue(object sender, CardEventArgs e)
     {
-        Player player = sender as Player;
-        Debug.Log("updating power value: " + e.currentPower);
-        if (e == null)
-            Debug.Log("error with CardEventArgs");
-        else
+        //Player player = sender as Player;
+        //Debug.Log("updating power value: " + e.currentPower);
+        //if (e == null)
+        //    Debug.Log("error with CardEventArgs");
+        //else
+        //{
+        //    IEnumerator Dialog()
+        //    {
+        //        ChangeUnitValue(e.circle, cardFight._player1.CalculatePowerOfUnit(e.circle), e.currentCritical);
+        //        yield return null;
+        //    }
+        //    RpcCalls.Add(Dialog());
+        //}
+        IEnumerator Dialog()
         {
-            IEnumerator Dialog()
-            {
-                ChangeUnitValue(e.circle, e.currentPower, e.currentCritical);
-                yield return null;
-            }
-            RpcCalls.Add(Dialog());
+            ChangeUnitValue(e.circle, e.recordedUnitValue);
+            yield return null;
         }
+        RpcCalls.Add(Dialog());
     }
 
-    public void ChangeUnitValue(int circle, int power, int critical)
+    public void ChangeUnitValue(int circle, RecordedUnitValue recordedUnitValue)
     {
-        if (UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle) != null)
-            animations.Add(UpdateUnitValue(circle, power, critical));
-        else
-            Debug.Log("invalid circle: " + circle);
+        animations.Add(UpdateUnitValue(circle, recordedUnitValue));
     }
 
-    IEnumerator UpdateUnitValue(int circle, int power, int critical)
+    IEnumerator UpdateUnitValue(int circle, RecordedUnitValue recordedUnitValue)
     {
-        UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._power = power;
-        UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._critical = critical;
+        //UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._power = power;
+        //UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._critical = critical;
+        _recordedUnitValues[circle] = recordedUnitValue;
+        //foreach (GameObject slot in UnitSlots.GetComponent<UnitSlots>().GetUnitSlots())
+        //{
+        //    UnitSlotBehavior unitSlot = slot.GetComponent<UnitSlotBehavior>();
+        //    if (_recordedUnitValues.ContainsKey(unitSlot._FL))
+        //    {
+        //        unitSlot._power = _recordedUnitValues[unitSlot._FL].currentPower;
+        //        unitSlot._critical = _recordedUnitValues[unitSlot._FL].currentCritical;
+        //    }
+        //}
         inAnimation = false;
         yield return null;
     }
@@ -1582,7 +1606,7 @@ public class CardFightManager : NetworkBehaviour
     {
         List<Card> card;
         List<string> _cardID;
-        Debug.Log("looking up " + cardID + "...");
+        //Debug.Log("looking up " + cardID + "...");
         if (cardDict.ContainsKey(cardID))
             return cardDict[cardID];
         else
