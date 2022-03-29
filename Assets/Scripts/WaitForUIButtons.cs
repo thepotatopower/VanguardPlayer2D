@@ -30,6 +30,35 @@ public class WaitForUIButtons : CustomYieldInstruction, System.IDisposable
         }
         Reset();
     }
+
+    public void AddButton(Button newButton)
+    {
+        foreach (ButtonCallback existingButton in m_Buttons)
+        {
+            if (existingButton.button == newButton)
+                return;
+        }
+        var bc = new ButtonCallback { button = newButton };
+        bc.listener = () => OnButtonPressed(bc.button);
+        m_Buttons.Add(bc);
+        //m_Buttons.Capacity++;
+        Reset();
+    }
+
+    public void RemoveButton(Button removeButton)
+    { 
+        foreach (ButtonCallback bc in m_Buttons)
+        {
+            if (bc.button == removeButton)
+            {
+                //m_Buttons.Capacity--;
+                m_Buttons.Remove(bc);
+                break;
+            }
+        }
+        Reset();
+    }
+
     public WaitForUIButtons(params Button[] aButtons) : this(null, aButtons) { }
 
     private void OnButtonPressed(Button button)

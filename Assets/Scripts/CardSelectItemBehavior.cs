@@ -7,19 +7,20 @@ public class CardSelectItemBehavior : MonoBehaviour
 {
     VisualInputManager inputManager;
     CardFightManager cardFightManager;
-    CardSelect cardSelect;
+    public CardSelect cardSelect;
     public string cardID;
     public int tempID;
     public bool selected = false;
     public Color32 defaultColor;
     public GameObject NumberCircle;
     public Text Number;
+    public string description = "";
     
     void Start()
     {
         inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
         cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
-        cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
+        //cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         defaultColor = this.GetComponent<Image>().color;
     }
 
@@ -28,6 +29,7 @@ public class CardSelectItemBehavior : MonoBehaviour
         cardFightManager.DisplayCard(cardID, tempID);
         if (!selected)
             this.GetComponent<Image>().color = new Color32(195, 243, 250, 255);
+        cardSelect.description = description;
     }
 
     public void OnPointerExit()

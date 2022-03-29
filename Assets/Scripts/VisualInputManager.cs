@@ -18,8 +18,10 @@ public class VisualInputManager : NetworkBehaviour
     public Button yesButton;
     public Button noButton;
     public Button toggle;
-    public Button cardButton;
-    public Button cardButton2;
+    public Button cardButtonPrefab;
+    //public Button cardButton;
+    //public Button cardButton2;
+    public Button cardButton3;
     public Button rideFromRideDeck;
     public Button cancelButton;
     public Button viewButton;
@@ -84,6 +86,9 @@ public class VisualInputManager : NetworkBehaviour
     public List<bool> upright = new List<bool>();
     public List<bool> bools = new List<bool>();
     public List<int> ints = new List<int>();
+    public List<bool> isMandatory = new List<bool>();
+    public List<bool> canFullyResolve = new List<bool>();
+    public List<string> abilityDescriptions = new List<string>();
     public bool receivedInput = false;
     public bool cardsAreSelectable = false;
     public bool cardsAreHoverable = true;
@@ -96,6 +101,7 @@ public class VisualInputManager : NetworkBehaviour
     List<Button> miscellaneousButtons;
     bool clicked = false;
     bool browsingField = false;
+    bool canActivateFromSoul = false;
     Vector3 currentMessageBoxPosition;
     Vector3 currentYesPosition;
     Vector3 currentNoPosition;
@@ -103,7 +109,7 @@ public class VisualInputManager : NetworkBehaviour
     Vector3 currentSelectionButton1Position;
     Vector3 currentSelectionButton2Position;
     Vector3 currentCallCardPosition;
-    WaitForUIButtons waitForButton;
+    WaitForUIButtons waitForButton; 
     IEnumerator currentRoutine = null;
 
     //VanguardEngine's InputManager logic
@@ -120,6 +126,9 @@ public class VisualInputManager : NetworkBehaviour
         public List<bool> _upright = new List<bool>();
         public List<bool> _faceup = new List<bool>();
         public List<bool> _bools = new List<bool>();
+        public List<bool> _isMandatory = new List<bool>();
+        public List<bool> _canFullyResolve = new List<bool>();
+        public List<string> _abilityDescriptions = new List<string>();
         public string string_value;
 
         protected override void RPS_Input()
@@ -177,10 +186,16 @@ public class VisualInputManager : NetworkBehaviour
 
         protected override void SelectFromList_Input()
         {
+            SelectFromList_Input(false);
+        }
+
+        void SelectFromList_Input(bool ignoreInputActive)
+        {
             Debug.Log("SelectFromList_Input started");
             Thread.Sleep(250);
             string location;
-            while (inputActive) ;
+            if (!ignoreInputActive)
+                while (inputActive) ;
             inputActive = true;
             _cardIDs.Clear();
             _tempIDs.Clear();
@@ -231,10 +246,10 @@ public class VisualInputManager : NetworkBehaviour
             while (inputActive) ;
             inputActive = true;
             _query = "Choose order for cards.";
-            int_value = cardsToSelect.Count;
-            int_value2 = cardsToSelect.Count;
-            inputActive = false;
-            SelectFromList_Input();
+            _min = cardsToSelect.Count;
+            _max = cardsToSelect.Count;
+            //inputActive = false;
+            SelectFromList_Input(true);
         }
 
         protected override void DisplayCards_Input()
@@ -245,8 +260,8 @@ public class VisualInputManager : NetworkBehaviour
             _query = "Press Cancel to finish looking.";
             _max = 0;
             _min = 0;
-            inputActive = false;
-            SelectFromList_Input();
+            //inputActive = false;
+            SelectFromList_Input(true);
         }
 
         protected override void SelectRidePhaseAction_Input()
@@ -449,6 +464,9 @@ public class VisualInputManager : NetworkBehaviour
             _tempIDs.Clear();
             _strings.Clear();
             intlist_input.Clear();
+            _isMandatory.Clear();
+            _canFullyResolve.Clear();
+            _abilityDescriptions.Clear();
             Debug.Log(_abilities.Count + " abilities on standby.");
             foreach (Ability ability in _abilities)
             {
@@ -482,9 +500,14 @@ public class VisualInputManager : NetworkBehaviour
             foreach (Ability ability in _abilities)
             {
                 if (ability.isMandatory)
-                    _bools.Add(true);
+                    _isMandatory.Add(true);
                 else
-                    _bools.Add(false);
+                    _isMandatory.Add(false);
+                if (ability.CanFullyResolve())
+                    _canFullyResolve.Add(true);
+                else
+                    _canFullyResolve.Add(false);
+                _abilityDescriptions.Add(ability.Description);
             }
             inputSignal = InputType.SelectAbility;
             WaitForReadyToContinue();
@@ -523,9 +546,12 @@ public class VisualInputManager : NetworkBehaviour
 
         public void WaitForReadyToContinue()
         {
-            while (!inputManager.readyToContinue) ;
+            Debug.Log("WaitForReadyToContinue Start");
+            while (!inputManager.readyToContinue && inputManager.inputQueue.Count < 1) ;
+            Debug.Log("1| Input Queue: " + inputManager.inputQueue.Count);
             inputManager.readyToContinue = false;
             intlist_input.Clear();
+            Debug.Log("2| Input Queue: " + inputManager.inputQueue.Count);
             Inputs currentInput = inputManager.inputQueue.Dequeue();
             foreach (int input in currentInput.inputs)
                 intlist_input.Add(input);
@@ -541,6 +567,7 @@ public class VisualInputManager : NetworkBehaviour
             inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
+            //Debug.Log("WaitForReadyToContinue Finished");
         }
     }
 
@@ -576,7 +603,7 @@ public class VisualInputManager : NetworkBehaviour
         currentSelectionButton2Position = Globals.Instance.selectionButton2.transform.position;
         toggle = GameObject.Find("Toggle").GetComponent<Button>();
         toggle.transform.position = new Vector3(10000, 0, 0);
-        cardButton.transform.position = new Vector3(10000, 0, 0);
+        //cardButton.transform.position = new Vector3(10000, 0, 0);
         rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
         cancelButton.transform.position = new Vector3(10000, 0, 0);
         POW.transform.position = new Vector3(10000, 0, 0);
@@ -599,6 +626,7 @@ public class VisualInputManager : NetworkBehaviour
         EnemyBackLeft.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackLeft;
         EnemyBackMiddle.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackCenter;
         EnemyBackRight.GetComponent<UnitSlotBehavior>().slot = FL.EnemyBackRight;
+        waitForButton = new WaitForUIButtons();
     }
 
     // Update is called once per frame
@@ -642,6 +670,15 @@ public class VisualInputManager : NetworkBehaviour
             bools.Clear();
             foreach (bool b in inputManager._bools)
                 bools.Add(b);
+            isMandatory.Clear();
+            foreach (bool b in inputManager._isMandatory)
+                isMandatory.Add(b);
+            canFullyResolve.Clear();
+            foreach (bool b in inputManager._canFullyResolve)
+                canFullyResolve.Add(b);
+            abilityDescriptions.Clear();
+            foreach (string s in inputManager._abilityDescriptions)
+                abilityDescriptions.Add(s);
             actingPlayer = inputManager._actingPlayer._playerID;
             UpdateInputSignal(newSignal);
         }
@@ -854,6 +891,8 @@ public class VisualInputManager : NetworkBehaviour
             var waitForButton = new WaitForUIButtons(rockButton, scissorsButton, paperButton);
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == rockButton)
                     selection = 0;
                 else if (waitForButton.PressedButton == scissorsButton)
@@ -869,7 +908,8 @@ public class VisualInputManager : NetworkBehaviour
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             playerManager.CmdInputMade(isServer, newInput);
             inputQueue.Enqueue(newInput);
-            OnRPSSelection();
+            //OnRPSSelection();
+            readyToContinue = true;
         }
         else
         {
@@ -877,7 +917,8 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Waiting for opponent...";
             while (inputQueue.Count < 1)
                 yield return null;
-            OnRPSSelection();
+            //OnRPSSelection();
+            readyToContinue = true;
         }
         //Debug.Log("waiting for button");
     }
@@ -976,10 +1017,12 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select cards to mulligan.";
             mulliganButton.transform.localPosition = new Vector3(0, -110, 0);
             cardsAreSelectable = true;
-            waitForButton = new WaitForUIButtons(mulliganButton);
+            waitForButton.AddButton(mulliganButton);
             Debug.Log("waiting for button");
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == mulliganButton)
                     selection = 0;
                 yield return null;
@@ -1022,9 +1065,12 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = query;
             yesButton.transform.localPosition = new Vector3(-120, -110, 0);
             noButton.transform.localPosition = new Vector3(120, -110, 0);
-            waitForButton = new WaitForUIButtons(yesButton, noButton);
+            waitForButton.AddButton(yesButton);
+            waitForButton.AddButton(noButton);
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == yesButton)
                 {
                     selection = 1;
@@ -1082,20 +1128,24 @@ public class VisualInputManager : NetworkBehaviour
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
                 if (UnitSlots.GetComponent<UnitSlots>().IsUnit(tempIDs[i]))
-                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], false, strings[i]);
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, upright[i], false, true, "", strings[i]);
                 else if (Globals.Instance.playerDamageZone.GetComponent<DamageZone>().ContainsCard(tempIDs[i]))
-                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, faceup[i], true, false, strings[i]);
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, faceup[i], true, false, true, "", strings[i]);
                 else
-                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, false, strings[i]);
+                    cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, false, true, "", strings[i]);
             }
             int selection = -1;
-            waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
+            waitForButton.AddButton(cardSelect.SelectButton);
+            waitForButton.AddButton(cardSelect.CancelButton);
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == cardSelect.SelectButton || waitForButton.PressedButton == cardSelect.CancelButton) 
                     selection = 0;
                 yield return null;
             }
+            cardSelect.transform.position = Globals.Instance.ResetPosition;
             waitForButton.Reset();
             selections.AddRange(cardSelect.selected);
             while (!NetworkClient.ready)
@@ -1142,17 +1192,21 @@ public class VisualInputManager : NetworkBehaviour
             for (int i = 0; i < tempIDs.Count; i++)
             {
                 card = cardFightManager.LookUpCard(cardIDs[i]);
-                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, bools[i], strings[i]);
+                cardSelect.AddCardSelectItem(tempIDs[i], cardIDs[i], card.name, true, true, isMandatory[i], canFullyResolve[i], abilityDescriptions[i], strings[i]);
             }
-            waitForButton = new WaitForUIButtons(cardSelect.SelectButton, cardSelect.CancelButton);
+            waitForButton.AddButton(cardSelect.SelectButton);
+            waitForButton.AddButton(cardSelect.CancelButton);
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == cardSelect.SelectButton)
                     selection = 0;
                 else if (waitForButton.PressedButton == cardSelect.CancelButton)
                     selection = 1;
                 yield return null;
             }
+            cardSelect.transform.position = Globals.Instance.ResetPosition;
             waitForButton.Reset();
             if (selection == 0)
                 selection = tempIDs.IndexOf(cardSelect.selected[0]);
@@ -1200,10 +1254,10 @@ public class VisualInputManager : NetworkBehaviour
             int selection2 = -1;
             miscellaneousButtons.Clear();
             miscellaneousButtons.Add(rideFromRideDeck);
-            miscellaneousButtons.Add(cardButton);
             PhaseManager.GetComponent<PhaseManager>().MainPhaseButton.interactable = true;
             PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = false;
-            waitForButton = new WaitForUIButtons(rideFromRideDeck, cardButton, PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
+            waitForButton.AddButton(rideFromRideDeck);
+            waitForButton.AddButton(PhaseManager.GetComponent<PhaseManager>().MainPhaseButton);
             while (selection < 0)
             {
                 if (waitForButton.PressedButton == rideFromRideDeck)
@@ -1211,12 +1265,12 @@ public class VisualInputManager : NetworkBehaviour
                     Debug.Log("rideFromRideDeck pressed");
                     selection = RidePhaseAction.RideFromRideDeck;
                 }
-                else if (waitForButton.PressedButton == cardButton)
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Ride")
                 {
                     selection = RidePhaseAction.RideFromHand;
                     selection2 = selectedCard;
                 }
-                else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().MainPhaseButton)
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().MainPhaseButton)
                     selection = RidePhaseAction.End;
                 yield return null;
             }
@@ -1252,6 +1306,7 @@ public class VisualInputManager : NetworkBehaviour
         {
             yield return null;
         }
+        canActivateFromSoul = false;
         toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
@@ -1267,11 +1322,12 @@ public class VisualInputManager : NetworkBehaviour
                     Globals.Instance.unitSlots.MarkAsSelectable(tempIDs2[i]);
                 else if (Globals.Instance.playerDropZone.ContainsCard(tempIDs2[i]))
                     Globals.Instance.playerDropZone.MarkAsSelectable();
+                else if (GameObject.Find("PlayerVG").GetComponent<UnitSlotBehavior>()._soul.Exists(soul => soul.tempID == tempIDs2[i]))
+                    canActivateFromSoul = true;
             }
             int selection = -1;
             int selection2 = -1;
             miscellaneousButtons.Clear();
-            miscellaneousButtons.Add(cardButton);
             Debug.Log("turn: " + int1);
             PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = true;
             if (int1 <= 1)
@@ -1279,40 +1335,45 @@ public class VisualInputManager : NetworkBehaviour
                 PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = true;
                 PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = false;
             }
-            waitForButton = new WaitForUIButtons(cardButton, cardButton2, PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton,
-                Globals.Instance.soulCharge, Globals.Instance.counterCharge, Globals.Instance.damage, Globals.Instance.heal);
+            waitForButton.AddButton(PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton);
+            waitForButton.AddButton(PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
+            waitForButton.AddButton(Globals.Instance.soulCharge);
+            waitForButton.AddButton(Globals.Instance.counterCharge);
+            waitForButton.AddButton(Globals.Instance.damage);
+            waitForButton.AddButton(Globals.Instance.heal);
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == cardButton)
+                if (waitForButton.PressedButton == null)
+                    yield return null;
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Call")
                 {
-                    if (cardButton.GetComponentInChildren<Text>().text == "Call")
-                    {
-                        selection = MainPhaseAction.CallFromHand;
-                        selection2 = selectedCard;
-                    }
-                    else if (cardButton.GetComponentInChildren<Text>().text == "Move")
-                    {
-                        selection = MainPhaseAction.MoveRearguard;
-                        selection2 = selectedCard;
-                    }
-                    else if (cardButton.GetComponentInChildren<Text>().text == "Free")
-                    {
-                        selection = MainPhaseAction.CallFromPrison;
-                    }
+                    selection = MainPhaseAction.CallFromHand;
+                    selection2 = selectedCard;
                 }
-                else if (waitForButton.PressedButton == cardButton2)
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Move")
                 {
-                    if (cardButton2.GetComponentInChildren<Text>().text == "Activate")
+                    selection = MainPhaseAction.MoveRearguard;
+                    selection2 = selectedCard;
+                }
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Free")
+                {
+                    selection = MainPhaseAction.CallFromPrison;
+                }
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Activate")
+                {
+                    if (selectedGameObject == Globals.Instance.playerDropZone.gameObject)
+                        selection = MainPhaseAction.ActivateAbilityFromDrop;
+                    else
                     {
-                        if (selectedGameObject == Globals.Instance.playerDropZone.gameObject)
-                            selection = MainPhaseAction.ActivateAbilityFromDrop;
-                        else
-                        {
-                            selection = MainPhaseAction.ActivateAbility;
-                            selection2 = selectedCard;
-                        }
-                        selectedGameObject = null;
+                        selection = MainPhaseAction.ActivateAbility;
+                        selection2 = selectedCard;
                     }
+                    selectedGameObject = null;
+                }
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Activate Soul")
+                {
+                    selection = MainPhaseAction.ActivateAbilityFromSoul;
+                    selectedGameObject = null;
                 }
                 else if ((waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton) ||
                     (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton))
@@ -1368,21 +1429,19 @@ public class VisualInputManager : NetworkBehaviour
             int selection = -1;
             int selection2 = -1;
             miscellaneousButtons.Clear();
-            miscellaneousButtons.Add(cardButton);
             Debug.Log("making end phase button interactable");
             PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = true;
-            waitForButton = new WaitForUIButtons(cardButton, PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
+            waitForButton.AddButton(PhaseManager.GetComponent<PhaseManager>().EndPhaseButton);
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == cardButton)
+                if (waitForButton.PressedButton == null)
+                    yield return null;
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Attack")
                 {
-                    if (cardButton.GetComponentInChildren<Text>().text == "Attack")
-                    {
-                        selection = BattlePhaseAction.Attack;
-                        selection2 = selectedCard;
-                        POW.transform.localPosition = new Vector3(-382, 0, 0);
-                        POW.GetComponent<POWSLD>().SetCount(UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponent<UnitSlotBehavior>()._power);
-                    }
+                    selection = BattlePhaseAction.Attack;
+                    selection2 = selectedCard;
+                    POW.transform.localPosition = new Vector3(-382, 0, 0);
+                    POW.GetComponent<POWSLD>().SetCount(UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(selectedUnit).GetComponent<UnitSlotBehavior>()._power);
                 }
                 else if (waitForButton.PressedButton == PhaseManager.GetComponent<PhaseManager>().EndPhaseButton)
                     selection = BattlePhaseAction.End;
@@ -1467,20 +1526,18 @@ public class VisualInputManager : NetworkBehaviour
             int selection = -1;
             int selection2 = -1;
             miscellaneousButtons.Clear();
-            miscellaneousButtons.Add(cardButton);
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select unit to attack.";
             cancelButton.transform.localPosition = new Vector3(0, -110, 0);
-            waitForButton = new WaitForUIButtons(cardButton, cancelButton);
+            waitForButton.AddButton(cancelButton);
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == cardButton)
+                if (waitForButton.PressedButton == null)
+                    yield return null;
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Attack")
                 {
-                    if (cardButton.GetComponentInChildren<Text>().text == "Attack")
-                    {
-                        selection = selectedCard;
-                        UnitSlots.GetComponent<UnitSlots>().Reset();
-                    }
+                    selection = selectedCard;
+                    UnitSlots.GetComponent<UnitSlots>().Reset();
                 }
                 else if (waitForButton.PressedButton == cancelButton)
                 {
@@ -1548,19 +1605,22 @@ public class VisualInputManager : NetworkBehaviour
                 selectionButton1.interactable = false;
             else
                 selectionButton1.interactable = true;
-            waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2, cardButton, cardButton2);
+            waitForButton.AddButton(selectionButton1);
+            waitForButton.AddButton(selectionButton2);
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == selectionButton1)
                     selection = GuardStepAction.Guard;
                 else if (waitForButton.PressedButton == selectionButton2)
                     selection = GuardStepAction.End;
-                else if (waitForButton.PressedButton == cardButton && cardButton.GetComponentInChildren<Text>().text == "Intercept")
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Intercept")
                 {
                     selection = GuardStepAction.Intercept;
                     selection2 = selectedCard;
                 }
-                else if (waitForButton.PressedButton == cardButton2 && cardButton2.GetComponentInChildren<Text>().text == "Activate")
+                else if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Activate")
                 {
                     selection = GuardStepAction.BlitzOrder;
                     selection2 = selectedCard;
@@ -1607,19 +1667,16 @@ public class VisualInputManager : NetworkBehaviour
             int selection = -1;
             int selection2 = -1;
             miscellaneousButtons.Clear();
-            miscellaneousButtons.Add(cardButton);
-            waitForButton = new WaitForUIButtons(cardButton);
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = query;
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == cardButton)
+                if (waitForButton.PressedButton == null)
+                    yield return null;
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.GetComponentInChildren<Text>().text == "Select")
                 {
-                    if (cardButton.GetComponentInChildren<Text>().text == "Select")
-                    {
-                        selection = selectedCard;
-                        UnitSlots.GetComponent<UnitSlots>().Reset();
-                    }
+                    selection = selectedCard;
+                    UnitSlots.GetComponent<UnitSlots>().Reset();
                 }
                 yield return null;
             }
@@ -1664,11 +1721,14 @@ public class VisualInputManager : NetworkBehaviour
             selectionButton1.GetComponentInChildren<Text>().text = strings[0];
             selectionButton2.transform.localPosition = Globals.Instance.NoPosition;
             selectionButton2.GetComponentInChildren<Text>().text = strings[1];
-            waitForButton = new WaitForUIButtons(selectionButton1, selectionButton2);
+            waitForButton.AddButton(selectionButton1);
+            waitForButton.AddButton(selectionButton2);
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Choose an option.";
             while (selection < 0)
             {
+                if (waitForButton.PressedButton == null)
+                    yield return null;
                 if (waitForButton.PressedButton == selectionButton1)
                 {
                     selection = 1;
@@ -1714,10 +1774,10 @@ public class VisualInputManager : NetworkBehaviour
         if (isActingPlayer())
         {
             messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select " + int1 + " circle(s).";
+            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select " + count + " circle(s).";
             selectedUnit = -1;
             List<int> selectedCircles = new List<int>();
-            while (selectedCircles.Count < int1)
+            while (selectedCircles.Count < count)
             {
                 if (selectedUnit >= 0)
                 {
@@ -1780,6 +1840,14 @@ public class VisualInputManager : NetworkBehaviour
     //    StartCoroutine(Dialog());
     //}
 
+    public List<Button> GetMiscellaneousButtons()
+    {
+        List<Button> buttons = new List<Button>();
+        for (int i = 0; i <= Buttons.transform.childCount; i++)
+            buttons.Add(Buttons.transform.GetChild(0).GetComponent<Button>());
+        return buttons;
+    }
+
     public void ResetMiscellaneousButtons()
     {
         GameObject button;
@@ -1787,7 +1855,11 @@ public class VisualInputManager : NetworkBehaviour
         {
             button = Buttons.transform.GetChild(0).gameObject;
             button.transform.SetParent(null);
-            button.transform.position = Globals.Instance.ResetPosition;
+            if (button.name.Contains("cardButton"))
+            {
+                waitForButton.RemoveButton(button.GetComponent<Button>());
+                GameObject.Destroy(button);
+            }
         }
         //rideFromRideDeck.transform.position = new Vector3(10000, 0, 0);
         //cardButton.transform.position = new Vector3(10000, 0, 0);
@@ -1806,6 +1878,13 @@ public class VisualInputManager : NetworkBehaviour
     //    }
     //}
 
+    public Button CreateNewButton()
+    {
+        Button newButton = GameObject.Instantiate(cardButtonPrefab).GetComponent<Button>();
+        waitForButton.AddButton(newButton);
+        return newButton;
+    }
+
     public void OnPileClicked(Pile pile)
     {
         Debug.Log("pile clicked");
@@ -1816,13 +1895,15 @@ public class VisualInputManager : NetworkBehaviour
         }
         if (!cardFightManager.inAnimation && pile.gameObject.name == "EnemyOrderZone" && inputSignal == InputType.SelectMainPhaseAction && Globals.Instance.enemyMiscStats.prisoners > 0)
         {
-            cardButton.transform.SetParent(Buttons.transform);
-            cardButton.GetComponentInChildren<Text>().text = "Free";
+            Button newButton = CreateNewButton();
+            newButton.transform.SetParent(Buttons.transform);
+            newButton.GetComponentInChildren<Text>().text = "Free";
         }
         if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerDropZone" && pile.selectable && inputSignal == InputType.SelectMainPhaseAction)
         {
-            cardButton2.transform.SetParent(Buttons.transform);
-            cardButton2.GetComponentInChildren<Text>().text = "Activate";
+            Button newButton = CreateNewButton();
+            newButton.transform.SetParent(Buttons.transform);
+            newButton.GetComponentInChildren<Text>().text = "Activate";
             selectedGameObject = pile.gameObject;
         }
         if (!pile.gameObject.name.Contains("Deck") && cardFightManager != null && !cardFightManager.InAnimation())
@@ -1854,7 +1935,7 @@ public class VisualInputManager : NetworkBehaviour
             cardViewer.Initialize(label, 0, 0);
             foreach (Tuple<Card, bool> item in pile.GetCardsWithFaceUp())
             {
-                cardViewer.AddCardSelectItem(item.Item1.tempID, item.Item1.id, item.Item1.name, item.Item2, true, false, "");
+                cardViewer.AddCardSelectItem(item.Item1.tempID, item.Item1.id, item.Item1.name, item.Item2, true, false, true, "", "");
             }
         }
         else if (selectedGameObject.GetComponent<UnitSlotBehavior>() != null)
@@ -1863,7 +1944,7 @@ public class VisualInputManager : NetworkBehaviour
             cardViewer.Initialize("Soul", 0, 0);
             foreach (Card card in selectedGameObject.GetComponent<UnitSlotBehavior>()._soul)
             {
-                cardViewer.AddCardSelectItem(card.tempID, card.id, card.name, true, true, false, "");
+                cardViewer.AddCardSelectItem(card.tempID, card.id, card.name, true, true, false, true, "", "");
             }
         }
         selectedGameObject = null;
@@ -1883,8 +1964,9 @@ public class VisualInputManager : NetworkBehaviour
         }
         if (inputSignal == InputType.SelectRidePhaseAction)
         {
-            cardButton.transform.GetComponentInChildren<Text>().text = "Ride";
-            cardButton.transform.SetParent(Buttons.transform);
+            Button newButton = CreateNewButton();
+            newButton.transform.GetComponentInChildren<Text>().text = "Ride";
+            newButton.transform.SetParent(Buttons.transform);
             Debug.Log(card.name);
             selectedCard = Int32.Parse(card.name);
         }
@@ -1894,13 +1976,15 @@ public class VisualInputManager : NetworkBehaviour
             selectedCard = Int32.Parse(card.name);
             if (tempIDs.Contains(Int32.Parse(card.name)))
             {
-                cardButton.transform.GetComponentInChildren<Text>().text = "Call";
-                cardButton.transform.SetParent(Buttons.transform);
+                Button newButton = CreateNewButton();
+                newButton.transform.GetComponentInChildren<Text>().text = "Call";
+                newButton.transform.SetParent(Buttons.transform);
             }
             if (tempIDs2.Contains(Int32.Parse(card.name)))
             {
-                cardButton2.transform.GetComponentInChildren<Text>().text = "Activate";
-                cardButton2.transform.SetParent(Buttons.transform);
+                Button newButton = CreateNewButton();
+                newButton.transform.GetComponentInChildren<Text>().text = "Activate";
+                newButton.transform.SetParent(Buttons.transform);
                 Debug.Log(card.name + " selected for order");
             }
         }
@@ -1926,16 +2010,24 @@ public class VisualInputManager : NetworkBehaviour
             {
                 if (unit != null)
                 {
-                    cardButton.transform.GetComponentInChildren<Text>().text = "Move";
-                    cardButton.transform.SetParent(Buttons.transform);
+                    Button newButton = CreateNewButton();
+                    newButton.transform.GetComponentInChildren<Text>().text = "Move";
+                    newButton.transform.SetParent(Buttons.transform);
                     Debug.Log(unit.name);
                     selectedCard = Int32.Parse(unit.name);
                     selectedUnit = unitSlot;
                     if (selected)
                     {
-                        cardButton2.transform.GetComponentInChildren<Text>().text = "Activate";
-                        cardButton2.transform.SetParent(Buttons.transform);
+                        Button newButton2 = CreateNewButton();
+                        newButton2.transform.GetComponentInChildren<Text>().text = "Activate";
+                        newButton2.transform.SetParent(Buttons.transform);
                         Debug.Log(unit.name + " selected for ACT");
+                    }
+                    if (unitSlot == Globals.Instance.unitSlots.PlayerVGIndex && canActivateFromSoul)
+                    {
+                        Button newButton2 = CreateNewButton();
+                        newButton2.transform.GetComponentInChildren<Text>().text = "Activate Soul";
+                        newButton2.transform.SetParent(Buttons.transform);
                     }
                 }
             }
@@ -1943,8 +2035,9 @@ public class VisualInputManager : NetworkBehaviour
             {
                 if (unit != null && selected)
                 {
-                    cardButton.transform.GetComponentInChildren<Text>().text = "Attack";
-                    cardButton.transform.SetParent(Buttons.transform);
+                    Button newButton = CreateNewButton();
+                    newButton.transform.GetComponentInChildren<Text>().text = "Attack";
+                    newButton.transform.SetParent(Buttons.transform);
                     Debug.Log(unit.name);
                     selectedCard = Int32.Parse(unit.name);
                     selectedUnit = unitSlot;
@@ -1954,8 +2047,9 @@ public class VisualInputManager : NetworkBehaviour
             {
                 if (unit != null && selected)
                 {
-                    cardButton.transform.GetComponentInChildren<Text>().text = "Select";
-                    cardButton.transform.SetParent(Buttons.transform);
+                    Button newButton = CreateNewButton();
+                    newButton.transform.GetComponentInChildren<Text>().text = "Select";
+                    newButton.transform.SetParent(Buttons.transform);
                     Debug.Log(unit.name);
                     selectedCard = Int32.Parse(unit.name);
                     selectedUnit = unitSlot;
@@ -1965,8 +2059,9 @@ public class VisualInputManager : NetworkBehaviour
             {
                 if (unit != null && selected)
                 {
-                    cardButton.transform.GetComponentInChildren<Text>().text = "Intercept";
-                    cardButton.transform.SetParent(Buttons.transform);
+                    Button newButton = CreateNewButton();
+                    newButton.transform.GetComponentInChildren<Text>().text = "Intercept";
+                    newButton.transform.SetParent(Buttons.transform);
                     Debug.Log(unit.name);
                     selectedCard = Int32.Parse(unit.name);
                     selectedUnit = unitSlot;

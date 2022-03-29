@@ -17,6 +17,9 @@ public class CardSelect : MonoBehaviour
     public int minSelect = 1;
     GameObject CardSelectItem;
     List<GameObject> CardSelectItems;
+    public GameObject AbilityDescription;
+    public Text AbilityDescriptionText;
+    public string description = "";
 
 
     void Start()
@@ -24,6 +27,17 @@ public class CardSelect : MonoBehaviour
         selected = new List<int>();
         CardSelectItems = new List<GameObject>();
         selectedItems = new List<CardSelectItemBehavior>();
+    }
+
+    private void Update()
+    {
+        if (description != "")
+        {
+            AbilityDescription.SetActive(true);
+            AbilityDescriptionText.text = description;
+        }
+        else
+            AbilityDescription.SetActive(false);
     }
 
     public void Show()
@@ -48,9 +62,10 @@ public class CardSelect : MonoBehaviour
         SelectButton.interactable = false;
     }
 
-    public void AddCardSelectItem(int tempID, string cardID, string cardName, bool faceup, bool upright, bool mandatory, string location)
+    public void AddCardSelectItem(int tempID, string cardID, string cardName, bool faceup, bool upright, bool mandatory, bool canFullyResolve, string description, string location)
     {
         CardSelectItem = GameObject.Instantiate(CardSelectItemPrefab);
+        CardSelectItem.GetComponent<CardSelectItemBehavior>().cardSelect = this;
         //CardSelectItem.name = tempID.ToString();
         CardSelectItem.GetComponent<CardSelectItemBehavior>().tempID = tempID;
         if (!faceup && (Globals.Instance.playerOrderZone.ContainsCard(tempID) || 
@@ -70,7 +85,17 @@ public class CardSelect : MonoBehaviour
         CardSelectItem.transform.GetChild(1).GetComponent<Text>().text = cardName;
         CardSelectItem.transform.GetChild(2).GetComponent<Text>().text = location;
         if (mandatory)
+        {
             CardSelectItem.transform.GetChild(5).GetComponent<Text>().enabled = true;
+            CardSelectItem.transform.GetChild(5).GetComponent<Text>().text = "<Mandatory>";
+        }
+        if (!canFullyResolve)
+        {
+            CardSelectItem.transform.GetChild(5).GetComponent<Text>().enabled = true;
+            CardSelectItem.transform.GetChild(5).GetComponent<Text>().text = "<May not fully resolve>";
+            CardSelectItem.transform.GetChild(5).GetComponent<Text>().color = Color.red;
+        }
+        CardSelectItem.GetComponent<CardSelectItemBehavior>().description = description;
         CardSelectItem.GetComponent<CardSelectItemBehavior>().cardID = cardID;
         CardSelectItems.Add(CardSelectItem);
         CardSelectItem.transform.SetParent(content.transform);
@@ -96,6 +121,7 @@ public class CardSelect : MonoBehaviour
         maxSelect = 0;
         CardSelectItem = null;
         SelectButton.interactable = false;
+        description = "";
     }
 
     public void ItemSelected(int tempID, CardSelectItemBehavior item)

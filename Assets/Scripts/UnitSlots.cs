@@ -12,6 +12,7 @@ public class UnitSlots : MonoBehaviour
     GameObject[] _unitSlots;
     int _playerID;
     public UILineRenderer lineRendererPrefab;
+    public int PlayerVGIndex = -1;
 
     void Start()
     {
@@ -42,6 +43,7 @@ public class UnitSlots : MonoBehaviour
             _unitSlots[FL.EnemyBackRight] = GameObject.Find("EnemyBackRight");
             _unitSlots[FL.EnemyBackCenter] = GameObject.Find("EnemyBackCenter");
             _unitSlots[FL.EnemyVanguard] = GameObject.Find("EnemyVG");
+            PlayerVGIndex = FL.PlayerVanguard;
         }
         else
         {
@@ -57,6 +59,7 @@ public class UnitSlots : MonoBehaviour
             _unitSlots[FL.EnemyBackRight] = GameObject.Find("PlayerBackRight");
             _unitSlots[FL.EnemyBackCenter] = GameObject.Find("PlayerBackCenter");
             _unitSlots[FL.EnemyVanguard] = GameObject.Find("PlayerVG");
+            PlayerVGIndex = FL.EnemyVanguard;
         }
         for (int i = 0; i < _unitSlots.Length; i++)
         {

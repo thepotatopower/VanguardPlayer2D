@@ -87,7 +87,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/nirvana.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/hexaorb.txt";
         if (isServer)
         {
             Debug.Log("this is server");
