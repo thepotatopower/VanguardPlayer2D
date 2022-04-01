@@ -547,11 +547,16 @@ public class VisualInputManager : NetworkBehaviour
         public void WaitForReadyToContinue()
         {
             Debug.Log("WaitForReadyToContinue Start");
-            while (!inputManager.readyToContinue && inputManager.inputQueue.Count < 1) ;
-            Debug.Log("1| Input Queue: " + inputManager.inputQueue.Count);
+            //while (!inputManager.readyToContinue && inputManager.inputQueue.Count < 1) ;
+            while (true)
+            {
+                if (inputManager.readyToContinue && inputManager.inputQueue.Count > 0)
+                    break;
+            }
+            //Debug.Log("1| Input Queue: " + inputManager.inputQueue.Count);
             inputManager.readyToContinue = false;
             intlist_input.Clear();
-            Debug.Log("2| Input Queue: " + inputManager.inputQueue.Count);
+            //Debug.Log("2| Input Queue: " + inputManager.inputQueue.Count);
             Inputs currentInput = inputManager.inputQueue.Dequeue();
             foreach (int input in currentInput.inputs)
                 intlist_input.Add(input);
@@ -567,7 +572,7 @@ public class VisualInputManager : NetworkBehaviour
             inputSignal = InputType.Reset;
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
-            //Debug.Log("WaitForReadyToContinue Finished");
+            Debug.Log("WaitForReadyToContinue Finished");
         }
     }
 

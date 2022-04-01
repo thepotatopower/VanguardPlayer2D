@@ -153,9 +153,12 @@ public class Pile : NetworkBehaviour
         else
             Debug.Log("not rendering top card");
         pileCount.text = pile.Count.ToString();
-        if (name == "PlayerOrderZone")
-            Globals.Instance.playerMiscStats.UpdateSongText();
-        if (name == "EnemyOrderZone")
-            Globals.Instance.enemyMiscStats.UpdateSongText();
+        if (pile.Exists(card => card.orderType == OrderType.Song))
+        {
+            if (name == "PlayerOrderZone")
+                Globals.Instance.playerMiscStats.UpdateSongText();
+            if (name == "EnemyOrderZone")
+                Globals.Instance.enemyMiscStats.UpdateSongText();
+        }
     }
 }

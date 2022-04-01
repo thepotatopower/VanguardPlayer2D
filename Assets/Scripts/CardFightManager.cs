@@ -87,7 +87,7 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
-            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/hexaorb.txt";
+            deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
         if (isServer)
         {
             Debug.Log("this is server");
@@ -819,7 +819,8 @@ public class CardFightManager : NetworkBehaviour
         {
             if (currentZone.name == "PlayerDeck" || currentZone.name == "EnemyDeck")
                 currentZone.GetComponent<Pile>().AddCard(card, false);
-            currentZone.GetComponent<Pile>().AddCard(card, true);
+            else
+                currentZone.GetComponent<Pile>().AddCard(card, true);
         }
 
         Globals.Instance.playerMiscStats.SetWorld(Globals.Instance.playerOrderZone.GetComponent<Pile>().GetCards());
