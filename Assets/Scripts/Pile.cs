@@ -160,5 +160,18 @@ public class Pile : NetworkBehaviour
             if (name == "EnemyOrderZone")
                 Globals.Instance.enemyMiscStats.UpdateSongText();
         }
+        if (pile.Exists(card => card.orderType == OrderType.Meteorite))
+        {
+            int count = 0;
+            foreach (Card card in pile)
+            {
+                if (card.orderType == OrderType.Meteorite)
+                    count++;
+            }
+            if (name == "PlayerOrderZone")
+                Globals.Instance.playerMiscStats.UpdateMeteorText(count);
+            if (name == "EnemyOrderZone")
+                Globals.Instance.enemyMiscStats.UpdateMeteorText(count);
+        }
     }
 }

@@ -116,7 +116,7 @@ public class VisualInputManager : NetworkBehaviour
     public class IM : InputManager
     {
         public VisualInputManager inputManager;
-        public int inputSignal = 0;
+        public Tuple<int, int> _inputSignal = new Tuple<int, int>(0, 0);
         public bool inputActive = false;
         public bool reversed = false;
         public List<int> _tempIDs2 = new List<int>();
@@ -131,10 +131,15 @@ public class VisualInputManager : NetworkBehaviour
         public List<string> _abilityDescriptions = new List<string>();
         public string string_value;
 
+        void SetInputSignal(int inputSignal)
+        {
+            _inputSignal = new Tuple<int, int>(inputSignal, _actingPlayer._playerID);
+        }
+
         protected override void RPS_Input()
         {
             Debug.Log("RPS_Input started");
-            inputSignal = InputType.RPS;
+            SetInputSignal(InputType.RPS);
             WaitForReadyToContinue();
             inputActive = false;
             //if (inputManager.player1_input >= 0 && inputManager.player2_input >= 0)
@@ -164,7 +169,7 @@ public class VisualInputManager : NetworkBehaviour
             Thread.Sleep(250);
             while (inputActive) ;
             inputActive = true;
-            inputSignal = InputType.YesNo;
+            SetInputSignal(InputType.YesNo);
             _query = string_input;
             if (string_input == "Boost?")
                 int_value = _actingPlayer.GetBooster(_actingPlayer.GetAttacker().tempID);
@@ -179,7 +184,7 @@ public class VisualInputManager : NetworkBehaviour
             while (inputActive) ;
             inputActive = true;
             intlist_input.Clear();
-            inputSignal = InputType.Mulligan;
+            SetInputSignal(InputType.Mulligan);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -235,7 +240,7 @@ public class VisualInputManager : NetworkBehaviour
                 _faceup.Add(_actingPlayer.IsFaceUp(card));
                 _upright.Add(_actingPlayer.IsUpRight(card));
             }
-            inputSignal = InputType.SelectFromList;
+            SetInputSignal(InputType.SelectFromList);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -283,7 +288,7 @@ public class VisualInputManager : NetworkBehaviour
             if (_actingPlayer.CanRideFromRideDeck())
                 bool_value = true;
             Thread.Sleep(250);
-            inputSignal = InputType.SelectRidePhaseAction;
+            SetInputSignal(InputType.SelectRidePhaseAction);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -307,13 +312,13 @@ public class VisualInputManager : NetworkBehaviour
                     _tempIDs.Add(card.tempID);
                 }
             }
-            foreach (Ability ability in _abilities) //ACT and Orders
+            foreach (AbilityTimingCount ability in _abilities) //ACT and Orders
             {
-                _cardIDs2.Add(ability.GetCard().id);
-                _tempIDs2.Add(ability.GetCard().tempID);
+                _cardIDs2.Add(ability.ability.GetCard().id);
+                _tempIDs2.Add(ability.ability.GetCard().tempID);
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectMainPhaseAction;
+            SetInputSignal(InputType.SelectMainPhaseAction);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -328,7 +333,7 @@ public class VisualInputManager : NetworkBehaviour
             while (!proceed)
             {
                 string_value = card_input.id;
-                inputSignal = InputType.SelectCallLocation;
+                SetInputSignal(InputType.SelectCallLocation);
                 WaitForReadyToContinue();
                 if (!_circles.Contains(int_input) && ((_tempIDs.Count > 0 && _tempIDs.Contains(int_input)) || _tempIDs.Count == 0))
                 {
@@ -355,7 +360,7 @@ public class VisualInputManager : NetworkBehaviour
                 }
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectBattlePhaseAction;
+            SetInputSignal(InputType.SelectBattlePhaseAction);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -374,7 +379,7 @@ public class VisualInputManager : NetworkBehaviour
                 _tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectUnitToAttack;
+            SetInputSignal(InputType.SelectUnitToAttack);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -397,13 +402,13 @@ public class VisualInputManager : NetworkBehaviour
                 _cardIDs.Add(card.id);
                 _tempIDs.Add(card.tempID);
             }
-            foreach (Ability ability in _abilities) // Blitz Orders
+            foreach (AbilityTimingCount ability in _abilities) // Blitz Orders
             {
-                _cardIDs2.Add(ability.GetCard().id);
-                _tempIDs2.Add(ability.GetCard().tempID);
+                _cardIDs2.Add(ability.ability.GetCard().id);
+                _tempIDs2.Add(ability.ability.GetCard().tempID);
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectGuardStepAction;
+            SetInputSignal(InputType.SelectGuardStepAction);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -428,7 +433,7 @@ public class VisualInputManager : NetworkBehaviour
                 _tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectActiveUnit;
+            SetInputSignal(InputType.SelectActiveUnit);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -448,7 +453,7 @@ public class VisualInputManager : NetworkBehaviour
                 _tempIDs.Add(card.tempID);
             }
             Thread.Sleep(250);
-            inputSignal = InputType.SelectActiveUnit;
+            SetInputSignal(InputType.SelectActiveUnit);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -468,13 +473,13 @@ public class VisualInputManager : NetworkBehaviour
             _canFullyResolve.Clear();
             _abilityDescriptions.Clear();
             Debug.Log(_abilities.Count + " abilities on standby.");
-            foreach (Ability ability in _abilities)
+            foreach (AbilityTimingCount ability in _abilities)
             {
-                _tempIDs.Add(ability.GetCard().tempID);
-                _cardIDs.Add(ability.GetCard().id);
+                _tempIDs.Add(ability.ability.GetCard().tempID);
+                _cardIDs.Add(ability.ability.GetCard().id);
                 location = "<>";
                 //Debug.Log(_actingPlayer.GetLocation(card));
-                switch (_actingPlayer.GetLocation(ability.GetCard()))
+                switch (_actingPlayer.GetLocation(ability.ability.GetCard()))
                 {
                     case Location.RC:
                         location = "<RC>";
@@ -490,26 +495,26 @@ public class VisualInputManager : NetworkBehaviour
                         break;
                 }
                 _strings.Add(location);
-                _upright.Add(_actingPlayer.IsUpRight(ability.GetCard()));
+                _upright.Add(_actingPlayer.IsUpRight(ability.ability.GetCard()));
             }
             if (CheckForMandatoryEffects(_abilities))
                 bool_value = true;
             else
                 bool_value = false;
             _bools.Clear();
-            foreach (Ability ability in _abilities)
+            foreach (AbilityTimingCount ability in _abilities)
             {
-                if (ability.isMandatory)
+                if (ability.ability.isMandatory)
                     _isMandatory.Add(true);
                 else
                     _isMandatory.Add(false);
-                if (ability.CanFullyResolve())
+                if (ability.ability.CanFullyResolve(ability.activation, ability.timingCount))
                     _canFullyResolve.Add(true);
                 else
                     _canFullyResolve.Add(false);
-                _abilityDescriptions.Add(ability.Description);
+                _abilityDescriptions.Add(ability.ability.Description);
             }
-            inputSignal = InputType.SelectAbility;
+            SetInputSignal(InputType.SelectAbility);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -525,7 +530,7 @@ public class VisualInputManager : NetworkBehaviour
             {
                 _strings.Add(option);
             }
-            inputSignal = InputType.SelectOption;
+            SetInputSignal(InputType.SelectOption);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -539,7 +544,7 @@ public class VisualInputManager : NetworkBehaviour
             _ints.Clear();
             foreach (int i in intlist_input)
                 _ints.Add(i);
-            inputSignal = InputType.SelectCircle;
+            SetInputSignal(InputType.SelectCircle);
             WaitForReadyToContinue();
             inputActive = false;
         }
@@ -555,7 +560,6 @@ public class VisualInputManager : NetworkBehaviour
             }
             //Debug.Log("1| Input Queue: " + inputManager.inputQueue.Count);
             inputManager.readyToContinue = false;
-            intlist_input.Clear();
             //Debug.Log("2| Input Queue: " + inputManager.inputQueue.Count);
             Inputs currentInput = inputManager.inputQueue.Dequeue();
             foreach (int input in currentInput.inputs)
@@ -569,7 +573,7 @@ public class VisualInputManager : NetworkBehaviour
             else
                 bool_input = true;
             //Thread.Sleep(30 / 1000);
-            inputSignal = InputType.Reset;
+            SetInputSignal(InputType.Reset);
             while (!inputManager.readyToContinue) ;
             inputManager.readyToContinue = false;
             Debug.Log("WaitForReadyToContinue Finished");
@@ -637,10 +641,11 @@ public class VisualInputManager : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Thread.CurrentThread == currentThread && inputManager != null && inputManager.inputSignal > 0)
+        if (Thread.CurrentThread == currentThread && inputManager != null && inputManager._inputSignal.Item1 > 0)
         {
-            int newSignal = inputManager.inputSignal;
-            inputManager.inputSignal = 0;
+            int newSignal = inputManager._inputSignal.Item1;
+            int player = inputManager._inputSignal.Item2;
+            inputManager._inputSignal = new Tuple<int, int>(0, 0);
             count = inputManager._max;
             min = inputManager._min;
             query = inputManager._query;
@@ -684,8 +689,7 @@ public class VisualInputManager : NetworkBehaviour
             abilityDescriptions.Clear();
             foreach (string s in inputManager._abilityDescriptions)
                 abilityDescriptions.Add(s);
-            actingPlayer = inputManager._actingPlayer._playerID;
-            UpdateInputSignal(newSignal);
+            UpdateInputSignal(newSignal, player);
         }
         if (Thread.CurrentThread == currentThread && !receivedInput && inputSignal > 0)
         {
@@ -788,15 +792,16 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
-    public void UpdateInputSignal(int newInputSignal)
+    public void UpdateInputSignal(int newInputSignal, int player)
     {
         IEnumerator Dialog()
         {
             yield return new WaitForSeconds(.1f);
             while (cardFightManager.InAnimation())
                 yield return null;
-            Debug.Log("new input signal: " + newInputSignal);
+            Debug.Log("new input signal: " + newInputSignal + ", new acting player: " + player);
             inputSignal = newInputSignal;
+            actingPlayer = player;
             receivedInput = false;
         }
         StartCoroutine(Dialog());
@@ -1305,6 +1310,7 @@ public class VisualInputManager : NetworkBehaviour
     IEnumerator SelectMainPhaseAction()
     {
         Debug.Log("selecting main phase action");
+        Debug.Log("inputQueue count: " + inputQueue.Count);
         List<int> list = new List<int>();
         selectedGameObject = null;
         while (cardFightManager.InAnimation())

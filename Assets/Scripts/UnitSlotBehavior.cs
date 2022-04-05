@@ -24,6 +24,8 @@ public class UnitSlotBehavior : MonoBehaviour
     public bool inAnimation = false;
     public int _FL;
     public List<Card> _soul;
+    public GameObject leftArm;
+    public GameObject rightArm;
     bool showStats = false;
 
     private void Start()
@@ -98,7 +100,7 @@ public class UnitSlotBehavior : MonoBehaviour
         unit.transform.localScale = Vector3.one / (float)1.1;
         unit.transform.localRotation = Quaternion.Euler(Vector3.zero);
         if (!upright)
-            unit.transform.Rotate(new Vector3(0, -90, 0));
+            unit.transform.Rotate(new Vector3(0, 0, -90));
         if (this.transform.name.Contains("Enemy")) 
             unit.transform.Rotate(new Vector3(0, 0, 180));
         Grade.text = "G" + _grade;
@@ -121,6 +123,60 @@ public class UnitSlotBehavior : MonoBehaviour
             Power.enabled = false;
             Critical.enabled = false;
         }
+    }
+
+    public void AddArm(bool left, string cardID, GameObject card)
+    {
+        Debug.Log("adding arm");
+        GameObject arm;
+        if (left)
+            arm = leftArm;
+        else
+            arm = rightArm;
+        if (arm != null)
+        {
+            arm.transform.SetParent(null);
+            GameObject.Destroy(arm);
+        }
+        arm = card;
+        arm.transform.SetParent(this.transform);
+        arm.transform.SetSiblingIndex(0);
+        if (this.transform.name.Contains("Enemy"))
+            arm.transform.Rotate(new Vector3(0, 0, 180));
+        if (left)
+        {
+            if (this.transform.name.Contains("Enemy"))
+                arm.transform.localPosition = new Vector2(unit.transform.localPosition.x - unit.GetComponent<RectTransform>().sizeDelta.x * unit.transform.localScale.x, unit.transform.localPosition.y);
+            else
+                arm.transform.localPosition = new Vector2(unit.transform.localPosition.x + unit.GetComponent<RectTransform>().sizeDelta.x * unit.transform.localScale.x, unit.transform.localPosition.y);
+        }
+        else
+        {
+            if (this.transform.name.Contains("Enemy"))
+                arm.transform.localPosition = new Vector2(unit.transform.localPosition.x + unit.GetComponent<RectTransform>().sizeDelta.x * unit.transform.localScale.x, unit.transform.localPosition.y);
+            else
+                arm.transform.localPosition = new Vector2(unit.transform.localPosition.x - unit.GetComponent<RectTransform>().sizeDelta.x * unit.transform.localScale.x, unit.transform.localPosition.y);
+        }
+        if (left)
+            leftArm = arm;
+        else
+            rightArm = arm;
+    }
+
+    public GameObject RemoveArm(int tempID)
+    {
+        Debug.Log("removing arm");
+        GameObject arm;
+        if (leftArm != null && leftArm.name == tempID.ToString())
+            arm = leftArm;
+        else if (rightArm != null && rightArm.name == tempID.ToString())
+            arm = rightArm;
+        else
+            return null;
+        Vector2 currentPosition = arm.transform.position;
+        arm.transform.SetParent(GameObject.Find("Field").transform);
+        arm.transform.position = currentPosition;
+        return arm;
     }
 
     public void ChangeUnit(GameObject card)

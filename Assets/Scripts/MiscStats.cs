@@ -11,6 +11,7 @@ public class MiscStats : MonoBehaviour
     public Text prisonersText;
     public Text worldText;
     public Text songText;
+    public Text meteoriteText;
     public bool hasPrison = false;
     public int prisoners = 0;
 
@@ -100,5 +101,15 @@ public class MiscStats : MonoBehaviour
             }
         }
         songText.text += faceups + "/" + songs;
+    }
+
+    public void UpdateMeteorText(int count)
+    {
+        if (meteoriteText == null)
+        {
+            meteoriteText = GameObject.Instantiate(miscTextPrefab);
+            meteoriteText.transform.SetParent(this.transform);
+        }
+        meteoriteText.text = "Meteorites: " + count;
     }
 }
