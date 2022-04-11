@@ -67,7 +67,9 @@ public class PlayerManager : NetworkBehaviour
             }
         }
         if (cardFightManager.player1_deck.Count > 0 && cardFightManager.player2_deck.Count > 0 && cardFightManager.cardFight == null)
-            RpcTargetInitialize(cardFightManager.player1_deck, cardFightManager.player2_deck);
+        {
+            RpcTargetInitialize(cardFightManager.player1_deck, cardFightManager.player2_deck, Random.Range((int)1, (int)999999));
+        }
     }
 
     [ClientRpc]
@@ -82,11 +84,11 @@ public class PlayerManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void RpcTargetInitialize(List<string> player1cards, List<string> player2cards)
+    public void RpcTargetInitialize(List<string> player1cards, List<string> player2cards, int seed)
     {
         CardFightManager = GameObject.Find("CardFightManager");
         CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        cardFightManager.InitializeCardFight(player1cards, player2cards);
+        cardFightManager.InitializeCardFight(player1cards, player2cards, seed);
     }
 
     //[Command]

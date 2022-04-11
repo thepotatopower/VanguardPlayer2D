@@ -26,6 +26,8 @@ public class UnitSlotBehavior : MonoBehaviour
     public List<Card> _soul;
     public GameObject leftArm;
     public GameObject rightArm;
+    public GameObject cardStates;
+    public GameObject cardStatePrefab;
     bool showStats = false;
 
     private void Start()
@@ -39,8 +41,8 @@ public class UnitSlotBehavior : MonoBehaviour
         {
             if (Globals.Instance.cardFightManager._recordedUnitValues.ContainsKey(_FL))
             {
-                _power = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentPower;
-                _critical = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentCritical;
+                //_power = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentPower;
+                //_critical = Globals.Instance.cardFightManager._recordedUnitValues[_FL].currentCritical;
             }
             Power.text = _power.ToString();
             if (_power > _originalPower)
@@ -204,6 +206,12 @@ public class UnitSlotBehavior : MonoBehaviour
             unit.transform.position = currentPosition;
             unit = null;
         }
+        while (cardStates.transform.childCount > 0)
+        {
+            GameObject child = cardStates.transform.GetChild(0).gameObject;
+            child.transform.SetParent(null);
+            GameObject.Destroy(child);
+        }
         return removedCard;
     }
 
@@ -313,5 +321,47 @@ public class UnitSlotBehavior : MonoBehaviour
         if (unit != null && Int32.Parse(unit.name) == tempID)
             return true;
         return false;
+    }
+
+    public void UpdateCardState(int cardState, bool exists)
+    {
+        string cardStateString = "";
+        if (cardState == CardState.Friend)
+            cardStateString = "Friend";
+        else
+            return;
+        if (exists)
+            AddCardState(cardStateString);
+        else
+            RemoveCardState(cardStateString);
+    }
+
+    public void RemoveCardState(string cardState)
+    {
+        GameObject child;
+        for (int i = 0; i < cardStates.transform.childCount; i++)
+        {
+            child = cardStates.transform.GetChild(i).gameObject;
+            if (child.GetComponent<Text>().text == cardState)
+            {
+                child.transform.SetParent(null);
+                GameObject.Destroy(child);
+                break;
+            }
+        }
+    }
+
+    public void AddCardState(string cardState)
+    {
+        GameObject child;
+        for (int i = 0; i < cardStates.transform.childCount; i++)
+        {
+            child = cardStates.transform.GetChild(i).gameObject;
+            if (child.GetComponent<Text>().text == cardState)
+                return;
+        }
+        child = GameObject.Instantiate(cardStatePrefab);
+        child.GetComponent<Text>().text = cardState;
+        child.transform.SetParent(cardStates.transform);
     }
 }

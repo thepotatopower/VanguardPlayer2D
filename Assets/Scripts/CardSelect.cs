@@ -20,6 +20,7 @@ public class CardSelect : MonoBehaviour
     public GameObject AbilityDescription;
     public Text AbilityDescriptionText;
     public string description = "";
+    public bool _cancellable = false;
 
 
     void Start()
@@ -52,10 +53,17 @@ public class CardSelect : MonoBehaviour
 
     public void Initialize(string prompt, int min, int max)
     {
+        Initialize(prompt, min, max, false);
+    }
+
+    public void Initialize(string prompt, int min, int max, bool cancellable)
+    {
+        ResetItems();
+        _cancellable = cancellable;
         CardSelectPrompt.GetComponent<Text>().text = prompt;
         minSelect = min;
         maxSelect = max;
-        if (minSelect == 0)
+        if (minSelect == 0 || _cancellable)
             CancelButton.interactable = true;
         else
             CancelButton.interactable = false;

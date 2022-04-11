@@ -43,6 +43,7 @@ public class CardFightManager : NetworkBehaviour
     public Dictionary<int, RecordedUnitValue> _recordedUnitValues = new Dictionary<int, RecordedUnitValue>();
     public Dictionary<int, int> _recordedShieldValues = new Dictionary<int, int>();
     public int testValue = -1;
+    public int shuffleCount = 0;
 
     [SyncVar]
     public int counter;
@@ -163,7 +164,7 @@ public class CardFightManager : NetworkBehaviour
         return output;
     }
 
-    public void InitializeCardFight(List<string> player1cards, List<string> player2cards)
+    public void InitializeCardFight(List<string> player1cards, List<string> player2cards, int seed)
     {
         List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(player1cards, SQLpath);
         List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(player2cards, SQLpath);
@@ -181,9 +182,9 @@ public class CardFightManager : NetworkBehaviour
         Debug.Log("beginning cardfight initialization");
         Debug.Log(Application.dataPath + "/../Names.config");
         if (isServer)
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, 1);
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, seed, 1);
         else
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, 2);
+            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, seed, 2);
         Debug.Log("cardfight initialization finished");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
@@ -201,7 +202,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnAttack += PerformAttack;
         cardFight._player2.OnAttack += PerformAttack;
         cardFight._player1.OnShieldValueChanged += ChangeShieldValue;
-        cardFight._player1.OnUnitValueChanged += ChangeUnitValue;
+        //cardFight._player1.OnUnitValueChanged += ChangeUnitValue;
         cardFight._player1.OnCardValueChanged += ChangeCardValue;
         cardFight._player2.OnCardValueChanged += ChangeCardValue;
         cardFight._player1.OnAttackHits += CheckIfAttackHits;
@@ -215,6 +216,11 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnAttackEnds += CheckIfAttackHits;
         cardFight._player2.OnAttackEnds += CheckIfAttackHits;
         cardFight._player1.OnShuffle += SendSeed;
+        cardFight._player1.OnSentToDeck += PerformSentToDeck;
+        cardFight._player2.OnSentToDeck += PerformSentToDeck;
+        cardFight._player1.OnLooking += PerformLooking;
+        cardFight._player2.OnLooking += PerformLooking;
+        cardFight._player1.OnUpdateValues += PerformUpdateValues;
         //cardFight._player2.OnShuffle += SendSeed;
         inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
@@ -298,10 +304,35 @@ public class CardFightManager : NetworkBehaviour
 
     public void SendSeed(object sender, CardEventArgs e)
     {
-        Debug.Log("sending seed, playerID: " + e.playerID + ", seed: " + e.i);
+        //Debug.Log("sending seed, playerID: " + e.playerID + ", seed: " + e.i);
         IEnumerator Dialog()
         {
-            playerManager.CmdShuffleSeed(e.playerID, e.i);
+            //playerManager.CmdShuffleSeed(e.playerID, e.i);
+            animations.Add(Animation());
+            yield return null;
+        }
+        IEnumerator Animation()
+        {
+            if (shuffleCount > 1)
+            {
+                GameObject messageBox = GameObject.Instantiate(Globals.Instance.deckMessageBoxPrefab);
+                messageBox.transform.position = Globals.Instance.ResetPosition;
+                messageBox.transform.SetParent(Field.transform);
+                if (isPlayerAction(e.playerID))
+                    messageBox.transform.localPosition = PlayerDeckZone.transform.localPosition;
+                else
+                    messageBox.transform.localPosition = EnemyDeckZone.transform.localPosition;
+                messageBox.GetComponentInChildren<Text>().text = "Shuffling.";
+                yield return new WaitForSeconds((float).33);
+                messageBox.GetComponentInChildren<Text>().text += ".";
+                yield return new WaitForSeconds((float).33);
+                messageBox.GetComponentInChildren<Text>().text += ".";
+                yield return new WaitForSeconds((float).33);
+                messageBox.transform.SetParent(null);
+                GameObject.Destroy(messageBox);
+            }
+            shuffleCount++;
+            inAnimation = false;
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -316,6 +347,25 @@ public class CardFightManager : NetworkBehaviour
                 Debug.Log("reading seed, playerID: " + playerID + ", seed: " + seed);
                 cardFight._player1.ReadSeed(seed);
                 Debug.Log("seed read");
+                if (shuffleCount > 2)
+                {
+                    GameObject messageBox = GameObject.Instantiate(Globals.Instance.deckMessageBoxPrefab);
+                    messageBox.transform.position = Globals.Instance.ResetPosition;
+                    messageBox.transform.SetParent(Field.transform);
+                    if (isPlayerAction(playerID))
+                        messageBox.transform.localPosition = PlayerDeckZone.transform.localPosition;
+                    else
+                        messageBox.transform.localPosition = EnemyDeckZone.transform.localPosition;
+                    messageBox.GetComponentInChildren<Text>().text = "Shuffling.";
+                    yield return new WaitForSeconds((float).33);
+                    messageBox.GetComponentInChildren<Text>().text += ".";
+                    yield return new WaitForSeconds((float).33);
+                    messageBox.GetComponentInChildren<Text>().text += ".";
+                    yield return new WaitForSeconds((float).33);
+                    messageBox.transform.SetParent(null);
+                    GameObject.Destroy(messageBox);
+                }
+                shuffleCount++;
                 inAnimation = false;
                 yield return null;
             }
@@ -775,7 +825,7 @@ public class CardFightManager : NetworkBehaviour
         float step = 2000 * Time.deltaTime;
         while (Vector3.Distance(newCard.transform.position, blankCard.transform.position) > 0.001f)
         {
-            newCard.transform.position = Vector3.MoveTowards(newCard.transform.position, blankCard.transform.position, step);
+            newCard.transform.position = Vector2.MoveTowards(newCard.transform.position, blankCard.transform.position, step);
             yield return null;
         }
         blankCard.transform.SetParent(null);
@@ -896,7 +946,7 @@ public class CardFightManager : NetworkBehaviour
             float step = 2000 * Time.deltaTime;
             while (Vector3.Distance(newCard.transform.position, nextObject.transform.position) > 0.001f)
             {
-                newCard.transform.position = Vector3.MoveTowards(newCard.transform.position, nextObject.transform.position, step);
+                newCard.transform.position = Vector2.MoveTowards(newCard.transform.position, nextObject.transform.position, step);
                 yield return null;
             }
             GameObject.Destroy(newCard);
@@ -940,13 +990,13 @@ public class CardFightManager : NetworkBehaviour
             float step = 600 * Time.deltaTime;
             while (Vector3.Distance(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition) > 0.001f)
             {
-                abilityBox.transform.localPosition = Vector3.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition, step);
+                abilityBox.transform.localPosition = Vector2.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxSlidePosition, step);
                 yield return null;
             }
             yield return new WaitForSecondsRealtime(1);
             while (Vector3.Distance(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxResetPosition) > 0.001f)
             {
-                abilityBox.transform.localPosition = Vector3.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxResetPosition, step);
+                abilityBox.transform.localPosition = Vector2.MoveTowards(abilityBox.transform.localPosition, Globals.Instance.AbilityBoxResetPosition, step);
                 yield return null;
             }
             abilityBoxAnimation = false;
@@ -997,7 +1047,7 @@ public class CardFightManager : NetworkBehaviour
                 Vector3 slidePosition = new Vector3(newCard.transform.localPosition.x + 75, newCard.transform.localPosition.y, 0);
                 while (Vector3.Distance(newCard.transform.localPosition, slidePosition) > 0.001f)
                 {
-                    newCard.transform.localPosition = Vector3.MoveTowards(newCard.transform.localPosition, slidePosition, step);
+                    newCard.transform.localPosition = Vector2.MoveTowards(newCard.transform.localPosition, slidePosition, step);
                     yield return null;
                 }
                 newCard.GetComponent<CardBehavior>().inAnimation = true;
@@ -1007,7 +1057,7 @@ public class CardFightManager : NetworkBehaviour
                 slidePosition = new Vector3(newCard.transform.localPosition.x - 75, newCard.transform.localPosition.y, 0);
                 while (Vector3.Distance(newCard.transform.localPosition, slidePosition) > 0.001f)
                 {
-                    newCard.transform.localPosition = Vector3.MoveTowards(newCard.transform.localPosition, slidePosition, step);
+                    newCard.transform.localPosition = Vector2.MoveTowards(newCard.transform.localPosition, slidePosition, step);
                     yield return null;
                 }
                 GameObject.Destroy(newCard);
@@ -1367,24 +1417,26 @@ public class CardFightManager : NetworkBehaviour
         //    }
         //    RpcCalls.Add(Dialog());
         //}
-        IEnumerator Dialog()
-        {
-            ChangeUnitValue(e.circle, e.recordedUnitValue);
-            yield return null;
-        }
-        RpcCalls.Add(Dialog());
+        //IEnumerator Dialog()
+        //{
+        //    ChangeUnitValue(e.circle, e.recordedUnitValue.currentPower, e.recordedUnitValue.currentCritical);
+        //    yield return null;
+        //}
+        //RpcCalls.Add(Dialog());
     }
 
-    public void ChangeUnitValue(int circle, RecordedUnitValue recordedUnitValue)
+    public void ChangeUnitValue(int circle, int power, int critical)
     {
-        animations.Add(UpdateUnitValue(circle, recordedUnitValue));
+        animations.Add(UpdateUnitValue(circle, power, critical));
     }
 
-    IEnumerator UpdateUnitValue(int circle, RecordedUnitValue recordedUnitValue)
+    IEnumerator UpdateUnitValue(int circle, int power, int critical)
     {
         //UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._power = power;
         //UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._critical = critical;
-        _recordedUnitValues[circle] = recordedUnitValue;
+        //_recordedUnitValues[circle] = recordedUnitValue;
+        UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._power = power;
+        UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(circle).GetComponent<UnitSlotBehavior>()._critical = critical;
         //foreach (GameObject slot in UnitSlots.GetComponent<UnitSlots>().GetUnitSlots())
         //{
         //    UnitSlotBehavior unitSlot = slot.GetComponent<UnitSlotBehavior>();
@@ -1425,6 +1477,34 @@ public class CardFightManager : NetworkBehaviour
         yield return null;
     }
 
+    public void PerformUpdateValues(object sender, CardEventArgs e)
+    {
+        IEnumerator Animation()
+        {
+            foreach (CardValues cv in e.cardValues)
+            {
+                if (Globals.Instance.unitSlots.GetUnitSlot(cv.circle) != null)
+                {
+                    UnitSlotBehavior unitSlot = Globals.Instance.unitSlots.GetUnitSlot(cv.circle).GetComponent<UnitSlotBehavior>();
+                    if (unitSlot.unit == null)
+                        continue;
+                    unitSlot._power = cv.power;
+                    unitSlot._critical = cv.critical;
+                    foreach (var cardState in cv.cardStates)
+                        unitSlot.UpdateCardState(cardState.Item1, cardState.Item2);
+                }
+            }
+            inAnimation = false;
+            yield return null;
+        }
+        IEnumerator Dialog()
+        {
+            animations.Add(Animation());
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
+    }
+
     public void CheckIfAttackHits(object sender, CardEventArgs e)
     {
         IEnumerator Dialog()
@@ -1448,6 +1528,54 @@ public class CardFightManager : NetworkBehaviour
         SLD.GetComponent<POWSLD>().Reset();
         inAnimation = false;
         yield return null;
+    }
+
+    public void PerformSentToDeck(object sender, CardEventArgs e)
+    {
+        if (isPlayerAction(e.playerID))
+            return;
+        IEnumerator Animation()
+        {
+            GameObject messageBox = GameObject.Instantiate(Globals.Instance.deckMessageBoxPrefab);
+            messageBox.transform.position = Globals.Instance.ResetPosition;
+            messageBox.transform.SetParent(Field.transform);
+            messageBox.transform.localPosition = EnemyDeckZone.transform.localPosition;
+            messageBox.GetComponentInChildren<Text>().text = e.message;
+            yield return new WaitForSeconds(1);
+            messageBox.transform.SetParent(null);
+            GameObject.Destroy(messageBox);
+            inAnimation = false;
+        }
+        IEnumerator Dialog()
+        {
+            animations.Add(Animation());
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
+    }
+
+    public void PerformLooking(object sender, CardEventArgs e)
+    {
+        if (isPlayerAction(e.playerID))
+            return;
+        IEnumerator Animation()
+        {
+            GameObject messageBox = GameObject.Instantiate(Globals.Instance.deckMessageBoxPrefab);
+            messageBox.transform.position = Globals.Instance.ResetPosition;
+            messageBox.transform.SetParent(Field.transform);
+            messageBox.transform.localPosition = EnemyDeckZone.transform.localPosition;
+            messageBox.GetComponentInChildren<Text>().text = e.message;
+            yield return new WaitForSeconds(1);
+            messageBox.transform.SetParent(null);
+            GameObject.Destroy(messageBox);
+            inAnimation = false;
+        }
+        IEnumerator Dialog()
+        {
+            animations.Add(Animation());
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
     }
 
     public void PerformReveal(object sender, CardEventArgs e)

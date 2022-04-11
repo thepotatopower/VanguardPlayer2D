@@ -97,11 +97,12 @@ public class VisualInputManager : NetworkBehaviour
     public EventSystem eventSystem;
     int selectedCard = -1;
     int selectedUnit = -1;
-    GameObject selectedGameObject = null;
+    public GameObject selectedGameObject = null;
     List<Button> miscellaneousButtons;
     bool clicked = false;
     bool browsingField = false;
     bool canActivateFromSoul = false;
+    bool cancellable = false;
     Vector3 currentMessageBoxPosition;
     Vector3 currentYesPosition;
     Vector3 currentNoPosition;
@@ -234,6 +235,9 @@ public class VisualInputManager : NetworkBehaviour
                         break;
                     case Location.Deck:
                         location = "<Deck>";
+                        break;
+                    case Location.Drop:
+                        location = "<Drop>";
                         break;
                 }
                 _strings.Add(location);
@@ -562,6 +566,7 @@ public class VisualInputManager : NetworkBehaviour
             inputManager.readyToContinue = false;
             //Debug.Log("2| Input Queue: " + inputManager.inputQueue.Count);
             Inputs currentInput = inputManager.inputQueue.Dequeue();
+            intlist_input.Clear();
             foreach (int input in currentInput.inputs)
                 intlist_input.Add(input);
             Debug.Log("received input 1: " + currentInput.input1);
@@ -653,6 +658,7 @@ public class VisualInputManager : NetworkBehaviour
             int1 = inputManager.int_value;
             int2 = inputManager.int_value2;
             string1 = inputManager.string_value;
+            cancellable = inputManager._cancellable;
             ints.Clear();
             foreach (int i in inputManager._ints)
                 ints.Add(i);
@@ -765,7 +771,7 @@ public class VisualInputManager : NetworkBehaviour
         }
         if (Input.GetMouseButtonDown(0))
         {
-            Debug.Log("clicked");
+            //Debug.Log("clicked");
             bool buttonClicked = false;
             for (int i = 0; i < Buttons.transform.childCount; i++)
             {
@@ -777,7 +783,7 @@ public class VisualInputManager : NetworkBehaviour
             }
             if (!buttonClicked)
             {
-                Debug.Log("no button clicked");
+                //Debug.Log("no button clicked");
                 ResetMiscellaneousButtons();
             }
             //foreach (Button button in miscellaneousButtons)
@@ -864,6 +870,7 @@ public class VisualInputManager : NetworkBehaviour
         cardsAreSelectable = false;
         PlayerHand.GetComponent<Hand>().Reset();
         Globals.Instance.playerDropZone.UnMarkAsSelectable();
+        Globals.Instance.playerOrderZone.UnMarkAsSelectable();
         if (isServer)
         {
             yield return null;
@@ -1131,7 +1138,7 @@ public class VisualInputManager : NetworkBehaviour
         if (isActingPlayer())
         {
             cardSelect.Show();
-            cardSelect.Initialize(query, min, count);
+            cardSelect.Initialize(query, min, count, cancellable);
             //Debug.Log("tempIDs Count: " + tempIDs.Count);
             //Debug.Log("cardIDs Count: " + cardIDs.Count);
             for (int i = 0; i < tempIDs.Count; i++)
@@ -1151,13 +1158,16 @@ public class VisualInputManager : NetworkBehaviour
             {
                 if (waitForButton.PressedButton == null)
                     yield return null;
-                if (waitForButton.PressedButton == cardSelect.SelectButton || waitForButton.PressedButton == cardSelect.CancelButton) 
+                if (waitForButton.PressedButton == cardSelect.SelectButton)
                     selection = 0;
+                else if (waitForButton.PressedButton == cardSelect.CancelButton)
+                    selection = 1;
                 yield return null;
             }
             cardSelect.transform.position = Globals.Instance.ResetPosition;
             waitForButton.Reset();
-            selections.AddRange(cardSelect.selected);
+            if (selection == 0)
+                selections.AddRange(cardSelect.selected);
             while (!NetworkClient.ready)
                 yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
@@ -1333,6 +1343,8 @@ public class VisualInputManager : NetworkBehaviour
                     Globals.Instance.unitSlots.MarkAsSelectable(tempIDs2[i]);
                 else if (Globals.Instance.playerDropZone.ContainsCard(tempIDs2[i]))
                     Globals.Instance.playerDropZone.MarkAsSelectable();
+                else if (Globals.Instance.playerOrderZone.ContainsCard(tempIDs2[i]))
+                    Globals.Instance.playerOrderZone.MarkAsSelectable();
                 else if (GameObject.Find("PlayerVG").GetComponent<UnitSlotBehavior>()._soul.Exists(soul => soul.tempID == tempIDs2[i]))
                     canActivateFromSoul = true;
             }
@@ -1374,6 +1386,8 @@ public class VisualInputManager : NetworkBehaviour
                 {
                     if (selectedGameObject == Globals.Instance.playerDropZone.gameObject)
                         selection = MainPhaseAction.ActivateAbilityFromDrop;
+                    else if (selectedGameObject == Globals.Instance.playerOrderZone.gameObject)
+                        selection = MainPhaseAction.ActivateAbilityFromOrderZone;
                     else
                     {
                         selection = MainPhaseAction.ActivateAbility;
@@ -1818,6 +1832,8 @@ public class VisualInputManager : NetworkBehaviour
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.inputs.AddRange(selectedCircles);
+            foreach (int circle in selectedCircles)
+                Debug.Log("Selected circle: " + circle);
             playerManager.CmdInputMade(isServer, newInput);
             inputQueue.Enqueue(newInput);
             readyToContinue = true;
@@ -1911,6 +1927,13 @@ public class VisualInputManager : NetworkBehaviour
             newButton.GetComponentInChildren<Text>().text = "Free";
         }
         if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerDropZone" && pile.selectable && inputSignal == InputType.SelectMainPhaseAction)
+        {
+            Button newButton = CreateNewButton();
+            newButton.transform.SetParent(Buttons.transform);
+            newButton.GetComponentInChildren<Text>().text = "Activate";
+            selectedGameObject = pile.gameObject;
+        }
+        if (!cardFightManager.inAnimation && pile.gameObject.name == "PlayerOrderZone" && pile.selectable && inputSignal == InputType.SelectMainPhaseAction)
         {
             Button newButton = CreateNewButton();
             newButton.transform.SetParent(Buttons.transform);
