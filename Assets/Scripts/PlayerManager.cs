@@ -20,15 +20,18 @@ public class PlayerManager : NetworkBehaviour
     public GameObject inputManager;
     public GameObject CardFightManager;
     public VanguardEngine.CardFight cardFight;
-    public List<string> player1cards;
-    public List<string> player2cards;
     public int i = 0;
     public bool server = false;
+    public NetworkConnection player1;
+    public NetworkConnection player2;
+    public MyNetworkManager myNetworkManager;
+    public LobbyManager lobbyManager;
 
     public override void OnStartClient()
     {
+        GameObject.DontDestroyOnLoad(this);
         base.OnStartClient();
-        this.name = "PlayerManager";
+        //this.name = "PlayerManager";
         PlayerDeckZone = GameObject.Find("PlayerDeckZone");
         EnemyDeckZone = GameObject.Find("EnemyDeckZone");
         PlayerHand = GameObject.Find("PlayerHand");
@@ -38,128 +41,58 @@ public class PlayerManager : NetworkBehaviour
             server = true;
         else
             server = false;
+        myNetworkManager = GameObject.Find("Communicator").GetComponent<Communicator>().myNetworkManager;
+        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
+        if (isLocalPlayer)
+        {
+            lobbyManager.playerManager = this;
+            ClientSetName(this.GetComponent<NetworkIdentity>(), lobbyManager.GetName(), lobbyManager.hosting);
+            lobbyManager.Proceed();
+        }
+    }
+
+    [Command]
+    public void ClientSetName(NetworkIdentity networkIdentity, string name, bool hosting)
+    {
+        if (myNetworkManager == null)
+            Debug.Log("myNetworkManager is null");
+        myNetworkManager.PlayerNames[networkIdentity.connectionToClient.connectionId] = name;
+        if (hosting)
+            myNetworkManager.Hosts.Add(networkIdentity.connectionToClient.connectionId);
     }
 
     [Server]
     public override void OnStartServer()
     {
-        Debug.Log("start server");
         base.OnStartServer();
+        myNetworkManager = GameObject.Find("Communicator").GetComponent<Communicator>().myNetworkManager;
+        lobbyManager = GameObject.Find("LobbyManager").GetComponent<LobbyManager>();
     }
 
     [Command]
-    public void CmdInitialize(List<string> input, int player)
+    public void CmdInitialize(List<string> input, GameObject playerManager, int playerID)
     {
-        CardFightManager = GameObject.Find("CardFightManager");
-        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        if (player == 1)
+        int connectionId = playerManager.GetComponent<NetworkIdentity>().connectionToClient.connectionId;
+        myNetworkManager.playerDecks[connectionId] = new List<string>(input);
+        Debug.Log("player" + connectionId + "detected");
+        if (myNetworkManager.PlayerPairs.ContainsKey(connectionId) && myNetworkManager.playerDecks.ContainsKey(myNetworkManager.PlayerPairs[connectionId]))
         {
-            foreach (string item in input)
-            {
-                cardFightManager.player1_deck.Add(item);
-            }
-        }
-        else
-        {
-            foreach (string item in input)
-            {
-                cardFightManager.player2_deck.Add(item);
-            }
-        }
-        if (cardFightManager.player1_deck.Count > 0 && cardFightManager.player2_deck.Count > 0 && cardFightManager.cardFight == null)
-        {
-            RpcTargetInitialize(cardFightManager.player1_deck, cardFightManager.player2_deck, Random.Range((int)1, (int)999999));
+            Debug.Log("both players detected");
+            int seed = Random.Range((int)1, (int)999999);
+            List<string> player1Deck = input;
+            List<string> player2Deck = myNetworkManager.playerDecks[myNetworkManager.PlayerPairs[connectionId]];
+            RpcTargetInitialize(myNetworkManager.PlayerConnectionIds[connectionId], new List<string>(player1Deck), new List<string>(player2Deck), seed, 1);
+            RpcTargetInitialize(myNetworkManager.PlayerConnectionIds[myNetworkManager.PlayerPairs[connectionId]], new List<string>(player1Deck), new List<string>(player2Deck), seed, 2);
         }
     }
 
-    [ClientRpc]
-    public void RpcAddCardToDeck(int playerID, string cardID)
+    [TargetRpc]
+    public void RpcTargetInitialize(NetworkConnection conn, List<string> player1Deck, List<string> player2Deck, int seed, int playerID)
     {
         CardFightManager = GameObject.Find("CardFightManager");
         CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        if (playerID == 1)
-            cardFightManager.player1_deck.Add(cardID);
-        else
-            cardFightManager.player2_deck.Add(cardID);
+        cardFightManager.InitializeCardFight(player1Deck, player2Deck, seed, playerID);
     }
-
-    [ClientRpc]
-    public void RpcTargetInitialize(List<string> player1cards, List<string> player2cards, int seed)
-    {
-        CardFightManager = GameObject.Find("CardFightManager");
-        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        cardFightManager.InitializeCardFight(player1cards, player2cards, seed);
-    }
-
-    //[Command]
-    //public void CmdChangeInput(int player, int input)
-    //{
-    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    //    if (player == 1)
-    //        vim.player1_input = input;
-    //    else
-    //        vim.player2_input = input;
-    //    Debug.Log("Player: " + player + " Input: " + input);
-    //    vim.numResponses++;
-    //    Debug.Log("numResponses: " + vim.numResponses.ToString());
-    //    if (vim.numResponses == 2)
-    //    {
-    //        RpcResetReceive();
-    //    }
-    //}
-
-    //[Command]
-    //public void CmdChangeInputs(List<int> inputs)
-    //{
-    //    Debug.Log("CmdChangeInputs");
-    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    //    foreach (int input in inputs)
-    //        vim.inputs.Add(input);
-    //    vim.numResponses = 2;
-    //    RpcResetReceive();
-    //}
-
-    ////[Command]
-    ////public void CmdSingleInput(int selection)
-    ////{
-    ////    Debug.Log("CmdSingleInput");
-    ////    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    ////    vim.player1_input = selection;
-    ////    vim.input1 = selection;
-    ////    vim.numResponses = 2;
-    ////    RpcResetReceive();
-    ////}
-
-    //[Command]
-    //public void CmdSingleInputs(int selection1, int selection2)
-    //{
-    //    Debug.Log("CmdSingleInputs");
-    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    //    vim.input1 = selection1;
-    //    vim.input2 = selection2;
-    //    vim.numResponses = 2;
-    //    RpcResetReceive();
-    //}
-
-    //[Command]
-    //public void CmdReady()
-    //{
-    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    //    vim.numResponses--;
-    //    Debug.Log("numResponses: " + vim.numResponses.ToString());
-    //    if (vim.numResponses == 0)
-    //    {
-    //        Debug.Log("ready to continue");
-    //        vim.readyToContinue = true;
-    //    }
-    //}
-
-    //[ClientRpc]
-    //public void RpcResetReceive()
-    //{
-    //    VisualInputManager vim = inputManager.GetComponent<VisualInputManager>();
-    //    vim.ResetReceive();
-    //}
 
     // Update is called once per frame
     void Update()
@@ -167,62 +100,92 @@ public class PlayerManager : NetworkBehaviour
         
     }
 
-    public Sprite LoadSprite(string filename)
+    //[Command]
+    //public void CmdShuffleSeed(int playerID, int seed)
+    //{
+    //    Debug.Log("CmdShuffleSeed, playerID: " + playerID + ", seed: " + seed);
+    //    RpcReadSeed(playerID, seed);
+    //}
+
+    //[ClientRpc]
+    //public void RpcReadSeed(int playerID, int seed)
+    //{
+    //    CardFightManager = GameObject.Find("CardFightManager");
+    //    CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
+    //    if (playerID == 1 && !isServer)
+    //        CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
+    //    else if (playerID == 2 && isServer)
+    //        CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
+    //}
+
+    [Command]
+    public void CmdInputMade(GameObject target, Inputs input)
     {
-        if (System.IO.File.Exists(filename))
+        int connectionId = target.GetComponent<NetworkIdentity>().connectionToClient.connectionId;
+        if (myNetworkManager.PlayerPairs.ContainsKey(connectionId))
         {
-            byte[] bytes = System.IO.File.ReadAllBytes(filename);
-            Texture2D texture = new Texture2D(1, 1);
-            texture.LoadImage(bytes);
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-            return sprite;
-        }
-        else
-        {
-            Debug.Log(filename + "doesn't exist.");
-            return null;
+            TargetInputMade(target.GetComponent<NetworkIdentity>().connectionToClient, input);
+            TargetInputMade(myNetworkManager.PlayerConnectionIds[myNetworkManager.PlayerPairs[connectionId]], input);
         }
     }
 
-    public string FixFileName(string input)
+    [TargetRpc]
+    public void TargetInputMade(NetworkConnection conn, Inputs input)
     {
-        int first = input.IndexOf('-');
-        string firstHalf = input.Substring(0, first);
-        string secondHalf = input.Substring(first + 1, input.Length - (first + 1));
-        int second = secondHalf.IndexOf('/');
-        return ("../art/" + firstHalf + secondHalf.Substring(0, second) + "_" + secondHalf.Substring(second + 1, secondHalf.Length - (second + 1)) + ".png").ToLower();
+        //if (player != isServer)
+        //{
+        //    inputManager.GetComponent<VisualInputManager>().inputQueue.Enqueue(input);
+        //}
+        inputManager.GetComponent<VisualInputManager>().inputQueue.Enqueue(input);
     }
 
     [Command]
-    public void CmdShuffleSeed(int playerID, int seed)
+    public void CmdGetHosts(NetworkIdentity source)
     {
-        Debug.Log("CmdShuffleSeed, playerID: " + playerID + ", seed: " + seed);
-        RpcReadSeed(playerID, seed);
-    }
-
-    [ClientRpc]
-    public void RpcReadSeed(int playerID, int seed)
-    {
-        CardFightManager = GameObject.Find("CardFightManager");
-        CardFightManager cardFightManager = CardFightManager.GetComponent<CardFightManager>();
-        if (playerID == 1 && !isServer)
-            CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
-        else if (playerID == 2 && isServer)
-            CardFightManager.GetComponent<CardFightManager>().ReadSeed(playerID, seed);
+        List<string> names = new List<string>();
+        List<int> ids = new List<int>();
+        if (myNetworkManager == null)
+            Debug.Log("MyNetworkManager null");
+        if (lobbyManager == null)
+            Debug.Log("LobbyManager null");
+        foreach (int key in myNetworkManager.Hosts)
+        {
+            if (myNetworkManager.PlayerNames.ContainsKey(key))
+            {
+                ids.Add(key);
+                names.Add(myNetworkManager.PlayerNames[key]);
+            }
+        }
+        lobbyManager.TargetGetHosts(source.connectionToClient, names, ids);
     }
 
     [Command]
-    public void CmdInputMade(bool player, Inputs input)
+    public void CmdBeginFight(int hostId, NetworkIdentity client)
     {
-        RpcInputMade(player, input);
+        if (client == null)
+            Debug.Log("client null");
+        if (client.connectionToClient == null)
+            Debug.Log("connectionToClient null");
+        BeginFight(hostId, client.connectionToClient.connectionId);
     }
 
-    [ClientRpc]
-    public void RpcInputMade(bool player, Inputs input)
+    [Command]
+    public void CmdBeginFight(int hostId, int clientId)
     {
-        if (player != isServer)
-        {
-            inputManager.GetComponent<VisualInputManager>().inputQueue.Enqueue(input);
-        }
+        BeginFight(hostId, clientId);
+    }
+
+    void BeginFight(int hostId, int clientId)
+    {
+        if (!myNetworkManager.PlayerConnectionIds.ContainsKey(hostId) || !myNetworkManager.PlayerConnectionIds.ContainsKey(clientId))
+            return;
+        myNetworkManager.Hosts.Remove(hostId);
+        myNetworkManager.PlayerPairs[hostId] = clientId;
+        myNetworkManager.PlayerPairs[clientId] = hostId;
+        Communicator communicator = GameObject.Find("Communicator").GetComponent<Communicator>();
+        Debug.Log("starting fight for player " + hostId);
+        communicator.TargetBeginFight(myNetworkManager.PlayerConnectionIds[hostId]);
+        Debug.Log("starting fight for player " + clientId);
+        communicator.TargetBeginFight(myNetworkManager.PlayerConnectionIds[clientId]);
     }
 }

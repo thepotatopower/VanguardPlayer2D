@@ -44,11 +44,12 @@ public class CardFightManager : NetworkBehaviour
     public Dictionary<int, int> _recordedShieldValues = new Dictionary<int, int>();
     public int testValue = -1;
     public int shuffleCount = 0;
+    public int _playerID = 0;
 
     [SyncVar]
     public int counter;
-    public List<string> player1_deck = new List<string>();
-    public List<string> player2_deck = new List<string>();
+    public SyncList<string> player1_deck = new SyncList<string>();
+    public SyncList<string> player2_deck = new SyncList<string>();
     [SyncVar]
     public NetworkIdentity host;
     [SyncVar]
@@ -92,20 +93,22 @@ public class CardFightManager : NetworkBehaviour
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
             //deckPath = Application.dataPath + "/../" + "dsd01.txt";
             deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/testDeck.txt";
-        if (isServer)
-        {
-            Debug.Log("this is server");
-            host = networkIdentity;
-            //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
-            playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 1);
-        }
-        else
-        {
-            Debug.Log("this is client");
-            remote = networkIdentity;
-            //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/dsd01.txt";
-            playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 2);
-        }
+        //if (playerID == 1)
+        //{
+        //    Debug.Log("this is server");
+        //    host = networkIdentity;
+        //    //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
+        //    playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 1);
+        //}
+        //else
+        //{
+        //    Debug.Log("this is client");
+        //    remote = networkIdentity;
+        //    //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/dsd01.txt";
+        //    playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 2);
+        //}
+        //_playerID = playerManager._playerID;
+        playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), playerManager.gameObject, _playerID);
     }
 
     IEnumerator AnimateAnimations()
@@ -164,14 +167,15 @@ public class CardFightManager : NetworkBehaviour
         return output;
     }
 
-    public void InitializeCardFight(List<string> player1cards, List<string> player2cards, int seed)
+    public void InitializeCardFight(List<string> player1Deck, List<string> player2Deck, int seed, int playerID)
     {
-        List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(player1cards, SQLpath);
-        List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(player2cards, SQLpath);
+        _playerID = playerID;
+        List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(new List<string>(player1Deck), SQLpath);
+        List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(new List<string>(player2Deck), SQLpath);
         List<Card> tokens = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(Application.dataPath + "/../tokens.txt", LoadCode.Tokens), SQLpath);
         Debug.Log("player1 count: " + player1_generatedDeck.Count);
         Debug.Log("player2 count: " + player2_generatedDeck.Count);
-        inputManager.InitializeInputManager();
+        inputManager.InitializeInputManager(_playerID);
         //string luaPath = Application.dataPath + "/../lua";
         string luaPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua";
         cardFight = new VanguardEngine.CardFight();
@@ -181,10 +185,7 @@ public class CardFightManager : NetworkBehaviour
         //C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua
         Debug.Log("beginning cardfight initialization");
         Debug.Log(Application.dataPath + "/../Names.config");
-        if (isServer)
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, seed, 1);
-        else
-            cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, seed, 2);
+        cardFight.Initialize(player1_generatedDeck, player2_generatedDeck, tokens, inputManager.inputManager, luaPath, "Data Source=./cards.db;Version=3;", namePath, seed, _playerID);
         Debug.Log("cardfight initialization finished");
         //cardFight._player1.OnRideFromRideDeck += PerformRideFromRideDeck;
         //cardFight._player2.OnRideFromRideDeck += PerformRideFromRideDeck;
@@ -254,7 +255,7 @@ public class CardFightManager : NetworkBehaviour
         CardData[] myRideDeck;
         CardData[] enemyDeck;
         CardData[] enemyRideDeck;
-        if (isServer)
+        if (_playerID == 1)
         {
             myDeck = player1Cards;
             myRideDeck = player1RideCards;
@@ -340,7 +341,7 @@ public class CardFightManager : NetworkBehaviour
 
     public void ReadSeed(int playerID, int seed)
     {
-        if ((isServer && playerID == 2) || (!isServer && playerID == 1))
+        if ((playerID == 1 && playerID == 2) || (playerID != 1 && playerID == 1))
         {
             IEnumerator Dialog()
             {
@@ -383,7 +384,7 @@ public class CardFightManager : NetworkBehaviour
         Card2.name = tempID2.ToString();
         Card1.GetComponent<CardBehavior>().card = card1;
         Card2.GetComponent<CardBehavior>().card = card2;
-        if (isServer)
+        if (_playerID == 1)
         {
             inputManager.PlayerVG.GetComponent<UnitSlotBehavior>().AddCard(card1.OriginalGrade(), card1.critical, card1.power, card1.power, true, false, cardID1, Card1);
             inputManager.EnemyVG.GetComponent<UnitSlotBehavior>().AddCard(card2.OriginalGrade(), card2.critical, card2.power, card2.power, true, false, cardID2, Card2);
@@ -462,7 +463,7 @@ public class CardFightManager : NetworkBehaviour
             }
             if (location == Location.Deck)
             {
-                if (isServer)
+                if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
                         zone = PlayerDeckZone;
@@ -480,7 +481,7 @@ public class CardFightManager : NetworkBehaviour
             else if (location == Location.RideDeck)
             {
                 Debug.Log("ride deck here");
-                if (isServer)
+                if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
                         zone = PlayerRideDeckZone;
@@ -497,7 +498,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Hand)
             {
-                if (isServer)
+                if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
                         zone = PlayerHand;
@@ -515,7 +516,7 @@ public class CardFightManager : NetworkBehaviour
             else if (location == Location.Drop)
             {
                 Debug.Log("drop here");
-                if (isServer)
+                if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
                         zone = PlayerDropZone;
@@ -1195,7 +1196,7 @@ public class CardFightManager : NetworkBehaviour
 
     public void ChangePhase(int phase, int actingPlayer, int turn)
     {
-        if ((actingPlayer == 1 && isServer) || (actingPlayer == 2 && !isServer))
+        if ((actingPlayer == 1 && _playerID == 1) || (actingPlayer == 2 && _playerID == 2))
             animations.Add(WaitForPhase(phase, true, turn));
         else
             animations.Add(WaitForPhase(phase, false, turn));
@@ -1809,18 +1810,19 @@ public class CardFightManager : NetworkBehaviour
 
     public bool isPlayerAction(int playerID)
     {
-        if (isServer)
-        {
-            if (playerID == 1)
-                return true;
-            return false;
-        }
-        else
-        {
-            if (playerID == 2)
-                return true;
-            return false;
-        }
+        return _playerID == playerID;
+        //if (playerID == 1)
+        //{
+        //    if (playerID == 1)
+        //        return true;
+        //    return false;
+        //}
+        //else
+        //{
+        //    if (playerID == 2)
+        //        return true;
+        //    return false;
+        //}
     }
 
     public readonly struct CardData

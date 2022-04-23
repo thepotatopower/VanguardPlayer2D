@@ -112,6 +112,7 @@ public class VisualInputManager : NetworkBehaviour
     Vector3 currentCallCardPosition;
     WaitForUIButtons waitForButton; 
     IEnumerator currentRoutine = null;
+    public int _playerID = 0;
 
     //VanguardEngine's InputManager logic
     public class IM : InputManager
@@ -126,7 +127,6 @@ public class VisualInputManager : NetworkBehaviour
         public List<string> _strings = new List<string>();
         public List<bool> _upright = new List<bool>();
         public List<bool> _faceup = new List<bool>();
-        public List<bool> _bools = new List<bool>();
         public List<bool> _isMandatory = new List<bool>();
         public List<bool> _canFullyResolve = new List<bool>();
         public List<string> _abilityDescriptions = new List<string>();
@@ -816,9 +816,9 @@ public class VisualInputManager : NetworkBehaviour
     public bool isActingPlayer()
     {
         bool value = false;
-        if (isServer && actingPlayer == 1)
+        if (_playerID == 1 && actingPlayer == 1)
             value = true;
-        else if (!isServer && actingPlayer == 2)
+        else if (_playerID == 2 && actingPlayer == 2)
             value = true;
         else
             value = false;
@@ -871,7 +871,7 @@ public class VisualInputManager : NetworkBehaviour
         PlayerHand.GetComponent<Hand>().Reset();
         Globals.Instance.playerDropZone.UnMarkAsSelectable();
         Globals.Instance.playerOrderZone.UnMarkAsSelectable();
-        if (isServer)
+        if (_playerID == 1)
         {
             yield return null;
             Debug.Log("host resetting");
@@ -887,10 +887,11 @@ public class VisualInputManager : NetworkBehaviour
         yield return null;
     }
 
-    public IM InitializeInputManager()
+    public IM InitializeInputManager(int playerID)
     {
         inputManager = new IM();
         inputManager.inputManager = this;
+        _playerID = playerID;
 
         return inputManager;
     }
@@ -923,8 +924,7 @@ public class VisualInputManager : NetworkBehaviour
             newInput.input1 = selection;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             //OnRPSSelection();
             readyToContinue = true;
         }
@@ -949,7 +949,7 @@ public class VisualInputManager : NetworkBehaviour
         scissorsButton.transform.position = new Vector3(10000, 0, 0);
         messageBox.transform.localPosition = new Vector3(0, 0, 0);
         readyToContinue = true;
-        //if (isServer)
+        //if (_playerID == 1)
         //{
         //    Debug.Log("player 1 made selection " + selection.ToString());
         //    playerManager.CmdChangeInput(1, selection);
@@ -968,7 +968,7 @@ public class VisualInputManager : NetworkBehaviour
         Button player_selection;
         Button enemy_selection;
         messageBox.transform.position = new Vector3(10000, 0, 0);
-        //if (isServer)
+        //if (_playerID == 1)
         //{
         //    if (player1_input == 0)
         //        player_selection = rockButton;
@@ -1054,8 +1054,7 @@ public class VisualInputManager : NetworkBehaviour
             Inputs newInput = new Inputs();
             newInput.inputs.AddRange(selections);
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1103,14 +1102,13 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1168,14 +1166,13 @@ public class VisualInputManager : NetworkBehaviour
             waitForButton.Reset();
             if (selection == 0)
                 selections.AddRange(cardSelect.selected);
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.inputs.AddRange(selections);
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1234,12 +1231,11 @@ public class VisualInputManager : NetworkBehaviour
                 selection = tempIDs.Count;
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1296,15 +1292,14 @@ public class VisualInputManager : NetworkBehaviour
             }
             PhaseManager.GetComponent<PhaseManager>().MainPhaseButton.interactable = false;
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1416,15 +1411,14 @@ public class VisualInputManager : NetworkBehaviour
             PhaseManager.GetComponent<PhaseManager>().BattlePhaseButton.interactable = false;
             PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = false;
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1474,15 +1468,14 @@ public class VisualInputManager : NetworkBehaviour
             }
             PhaseManager.GetComponent<PhaseManager>().EndPhaseButton.interactable = false;
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1513,14 +1506,13 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select call location.";
             while (!clicked)
                 yield return null;
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selectedUnit;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1575,15 +1567,14 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1653,15 +1644,14 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1706,15 +1696,14 @@ public class VisualInputManager : NetworkBehaviour
                 yield return null;
             }
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.input1 = selection;
             newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1738,42 +1727,50 @@ public class VisualInputManager : NetworkBehaviour
         toggle.transform.localPosition = Globals.Instance.TogglePosition;
         if (isActingPlayer())
         {
-            Button selectionButton1 = GameObject.Find("SelectionButton1").GetComponent<Button>();
-            Button selectionButton2 = GameObject.Find("SelectionButton2").GetComponent<Button>();
             int selection = -1;
-            int selection2 = -1;
-            selectionButton1.transform.localPosition = Globals.Instance.YesPosition;
-            selectionButton1.GetComponentInChildren<Text>().text = strings[0];
-            selectionButton2.transform.localPosition = Globals.Instance.NoPosition;
-            selectionButton2.GetComponentInChildren<Text>().text = strings[1];
-            waitForButton.AddButton(selectionButton1);
-            waitForButton.AddButton(selectionButton2);
-            messageBox.transform.localPosition = new Vector3(0, 0, 0);
-            messageBox.transform.GetChild(0).GetComponent<Text>().text = "Choose an option.";
+            for (int i = 0; i < strings.Count; i++)
+            {
+                GameObject optionButton = GameObject.Instantiate(Globals.Instance.selectionPrefab);
+                optionButton.GetComponentInChildren<Text>().text = strings[i];
+                optionButton.transform.SetParent(Globals.Instance.selections.transform);
+                optionButton.name = "Option" + (i + 1);
+                if (!bools[i])
+                    optionButton.GetComponent<Button>().interactable = false;
+                waitForButton.AddButton(optionButton.GetComponent<Button>());
+            }
+            Button selectedButton = null;
             while (selection < 0)
             {
-                if (waitForButton.PressedButton == null)
-                    yield return null;
-                if (waitForButton.PressedButton == selectionButton1)
+                if (waitForButton.PressedButton != null && waitForButton.PressedButton.name.Contains("Option"))
                 {
+                    selectedButton = waitForButton.PressedButton;
                     selection = 1;
-                }
-                else if (waitForButton.PressedButton == selectionButton2)
-                {
-                    selection = 2;
                 }
                 yield return null;
             }
             waitForButton.Reset();
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
-            newInput.input1 = selection;
-            newInput.input2 = selection2;
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            GameObject selections = Globals.Instance.selections;
+            for (int i = 0; i < selections.transform.childCount; i++)
+            {
+                if (selections.transform.GetChild(i).name == selectedButton.name)
+                {
+                    newInput.input1 = i + 1;
+                    break;
+                }
+                Debug.Log("not selected button");
+            }
+            while (selections.transform.childCount > 0)
+            {
+                GameObject toDestroy = selections.transform.GetChild(0).gameObject;
+                toDestroy.transform.SetParent(null);
+                GameObject.Destroy(toDestroy);
+            }
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else
@@ -1826,16 +1823,15 @@ public class VisualInputManager : NetworkBehaviour
                 }
                 yield return null;
             }
-            while (!NetworkClient.ready)
-                yield return null;
+            //while (!NetworkClient.ready)
+            //    yield return null;
             NetworkIdentity networkIdentity = NetworkClient.connection.identity;
             playerManager = networkIdentity.GetComponent<PlayerManager>();
             Inputs newInput = new Inputs();
             newInput.inputs.AddRange(selectedCircles);
             foreach (int circle in selectedCircles)
                 Debug.Log("Selected circle: " + circle);
-            playerManager.CmdInputMade(isServer, newInput);
-            inputQueue.Enqueue(newInput);
+            playerManager.CmdInputMade(playerManager.gameObject, newInput);
             readyToContinue = true;
         }
         else

@@ -19,6 +19,8 @@ public class Globals : MonoBehaviour
     public GameObject orderArea;
     public GameObject ZoomIn;
     public GameObject deckMessageBoxPrefab;
+    public GameObject selections;
+    public GameObject selectionPrefab;
     public Pile playerOrderZone;
     public Pile enemyOrderZone;
     public Pile playerBindZone;
