@@ -54,7 +54,7 @@ public class DeckBuilderManager : MonoBehaviour
         string[] filePaths = Directory.GetFiles(deckDirectory);
         foreach (string filePath in filePaths)
         {
-            if (LoadCards.GenerateList(filePath, LoadCode.WithRideDeck) != null)
+            if (LoadCards.GenerateList(filePath, LoadCode.WithRideDeck, -1) != null)
             {
                 OpenDropdown.options.Add(new Dropdown.OptionData(filePath.Substring(deckDirectory.Length)));
             }
@@ -449,7 +449,7 @@ public class DeckBuilderManager : MonoBehaviour
         IEnumerator Dialog()
         {
             ClearDeck();
-            List<Card> cards = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(deckDirectory + OpenDropdown.options[OpenDropdown.value].text, LoadCode.WithRideDeck), SQLpath);
+            List<Card> cards = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(deckDirectory + OpenDropdown.options[OpenDropdown.value].text, LoadCode.WithRideDeck, -1), SQLpath);
             for (int i = 0; i < 4; i++)
             {
                 AddCard(LookUpCard(cards[i].id), false);

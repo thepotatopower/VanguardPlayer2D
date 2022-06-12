@@ -5,13 +5,13 @@ using Mirror;
 
 public class MyNetworkManager : NetworkManager
 {
-    public Communicator Communicator;
+    public Communicator communicator;
 
     public Dictionary<int, NetworkConnection> PlayerConnectionIds = new Dictionary<int, NetworkConnection>();
     public Dictionary<int, int> PlayerPairs = new Dictionary<int, int>();
     public Dictionary<int, string> PlayerNames = new Dictionary<int, string>();
+    public Dictionary<int, bool> PlayerReady = new Dictionary<int, bool>();
     public List<int> Hosts = new List<int>();
-    public List<int> toBeConnected = new List<int>();
 
     public Dictionary<int, List<string>> playerDecks = new Dictionary<int, List<string>>();
 
@@ -27,34 +27,8 @@ public class MyNetworkManager : NetworkManager
         player.name = $"{playerPrefab.name} [connId={conn.connectionId}]";
         if (!PlayerConnectionIds.ContainsKey(conn.connectionId))
             PlayerConnectionIds[conn.connectionId] = conn;
-        if (toBeConnected.Count > 0)
-        {
-            int player1 = toBeConnected[0];
-            toBeConnected.RemoveAt(0);
-            PlayerPairs[player1] = conn.connectionId;
-            PlayerPairs[conn.connectionId] = player1;
-        }
-        else
-            toBeConnected.Add(conn.connectionId);
-        //if (numPlayers == 1)
-        //    player.GetComponent<PlayerManager>()._playerID = 1;
-        //else
-        //    player.GetComponent<PlayerManager>()._playerID = 2;
+        PlayerReady[conn.connectionId] = false;
         NetworkServer.AddPlayerForConnection(conn, player);
-        //if (numPlayers == 1)
-        //    player.GetComponent<PlayerManager>()._playerID = 1;
-        //if (PlayerPairs.ContainsKey(conn.connectionId))
-        //{
-        //    //player.GetComponent<PlayerManager>()._playerID = 2;
-        //    //Debug.Log("spawning");
-        //    //GameObject newCardFightManager = Instantiate(spawnPrefabs.Find(prefab => prefab.name == "CardFightManager"));
-        //    //newCardFightManager.name = "CardFightManager";
-        //    //NetworkServer.Spawn(newCardFightManager);
-        //    Debug.Log("starting fight for player " + conn.connectionId);
-        //    Communicator.TargetBeginFight(conn);
-        //    Debug.Log("starting fight for player " + PlayerConnectionIds[PlayerPairs[conn.connectionId]].connectionId);
-        //    Communicator.TargetBeginFight(PlayerConnectionIds[PlayerPairs[conn.connectionId]]);
-        //}
     }
 
     public override void OnServerDisconnect(NetworkConnectionToClient conn)
@@ -62,9 +36,11 @@ public class MyNetworkManager : NetworkManager
         base.OnServerDisconnect(conn);
         if (PlayerPairs.ContainsKey(conn.connectionId))
         {
-            Communicator.TargetDisconnectClient(PlayerConnectionIds[PlayerPairs[conn.connectionId]]);
+            Debug.Log("disconnect " + PlayerConnectionIds[PlayerPairs[conn.connectionId]]);
+            communicator.TargetDisconnectClient(PlayerConnectionIds[PlayerPairs[conn.connectionId]]);
             PlayerNames.Remove(PlayerPairs[conn.connectionId]);
             playerDecks.Remove(PlayerPairs[conn.connectionId]);
+            PlayerReady.Remove(PlayerPairs[conn.connectionId]);
             PlayerPairs.Remove(PlayerPairs[conn.connectionId]);
             PlayerPairs.Remove(conn.connectionId);
         }

@@ -6,7 +6,7 @@ using VanguardEngine;
 using Mirror;
 using System;
 
-public class Pile : NetworkBehaviour
+public class Pile : MonoBehaviour
 {
     public PlayerManager playerManager;
     public Text pileCount;

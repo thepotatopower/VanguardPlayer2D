@@ -8,7 +8,7 @@ using Mirror;
 using System.Threading;
 using System;
 
-public class CardFightManager : NetworkBehaviour
+public class CardFightManager : MonoBehaviour
 {
     // Start is called before the first frame update
     public VanguardEngine.CardFight cardFight = null;
@@ -46,23 +46,15 @@ public class CardFightManager : NetworkBehaviour
     public int shuffleCount = 0;
     public int _playerID = 0;
 
-    [SyncVar]
-    public int counter;
-    public SyncList<string> player1_deck = new SyncList<string>();
-    public SyncList<string> player2_deck = new SyncList<string>();
-    [SyncVar]
-    public NetworkIdentity host;
-    [SyncVar]
-    public NetworkIdentity remote;
-
     public int _attacker = -1;
     public List<int> _attacked;
     public int _booster;
 
     public void Start()
     {
+        Debug.Log("CardFightManager Start");
         this.name = "CardFightManager";
-        Globals.Instance.cardFightManager = this;
+        //Globals.Instance.cardFightManager = this;
         _attacked = new List<int>();
         UnitSlots = GameObject.Find("UnitSlots");
         PlayerDeckZone = GameObject.Find("PlayerDeck");
@@ -80,35 +72,22 @@ public class CardFightManager : NetworkBehaviour
         POW = GameObject.Find("POW");
         SLD = GameObject.Find("SLD");
         cardDict = new Dictionary<string, Card>();
-        NetworkIdentity networkIdentity = NetworkClient.connection.identity;
-        playerManager = networkIdentity.GetComponent<PlayerManager>();
-        cardPrefab = playerManager.cardPrefab;
         SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;";
         namePath = "Data Source=" + Application.dataPath + "/../names.db;Version=3;";
         StartCoroutine(AnimateAnimations());
         StartCoroutine(ProcessRpcCalls());
+    }
+
+    public void Initialize(PlayerManager player)
+    {
+        playerManager = player;
         string deckPath = GameObject.Find("InputField").GetComponent<InputField>().text;
         Debug.Log(GameObject.Find("InputField").GetComponent<InputField>().text);
         Debug.Log("deckPath: " + deckPath);
         if (!System.IO.File.Exists(Application.dataPath + "/../" + deckPath))
             //deckPath = Application.dataPath + "/../" + "dsd01.txt";
             deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/testDeck.txt";
-        //if (playerID == 1)
-        //{
-        //    Debug.Log("this is server");
-        //    host = networkIdentity;
-        //    //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/orfist.txt";
-        //    playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 1);
-        //}
-        //else
-        //{
-        //    Debug.Log("this is client");
-        //    remote = networkIdentity;
-        //    //deckPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/Properties/dsd01.txt";
-        //    playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), 2);
-        //}
-        //_playerID = playerManager._playerID;
-        playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck), playerManager.gameObject, _playerID);
+        playerManager.CmdInitialize(LoadCards.GenerateList(deckPath, LoadCode.WithRideDeck, -1), playerManager.gameObject);
     }
 
     IEnumerator AnimateAnimations()
@@ -129,10 +108,10 @@ public class CardFightManager : NetworkBehaviour
                 animations.RemoveAt(0);
                 inputManager.cardsAreHoverable = true;
             }
-            if (cardFight != null && cardFight._player1 != null)
-            {
-                testValue = cardFight._player1.GetSeedsToBeRead().Count;
-            }
+            //if (cardFight != null && cardFight._player1 != null)
+            //{
+            //    testValue = cardFight._player1.GetSeedsToBeRead().Count;
+            //}
             yield return null;
         }
     }
@@ -167,15 +146,23 @@ public class CardFightManager : NetworkBehaviour
         return output;
     }
 
-    public void InitializeCardFight(List<string> player1Deck, List<string> player2Deck, int seed, int playerID)
+    public void InitializeCardFight(List<string> player1Deck, List<string> player2Deck, int seed, int playerID, string replay)
     {
+        SQLpath = "Data Source=" + Application.dataPath + "/../cards.db;Version=3;";
         _playerID = playerID;
         List<Card> player1_generatedDeck = LoadCards.GenerateCardsFromList(new List<string>(player1Deck), SQLpath);
         List<Card> player2_generatedDeck = LoadCards.GenerateCardsFromList(new List<string>(player2Deck), SQLpath);
-        List<Card> tokens = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(Application.dataPath + "/../tokens.txt", LoadCode.Tokens), SQLpath);
+        List<Card> tokens = LoadCards.GenerateCardsFromList(LoadCards.GenerateList(Application.dataPath + "/../tokens.txt", LoadCode.Tokens, -1), SQLpath);
         Debug.Log("player1 count: " + player1_generatedDeck.Count);
         Debug.Log("player2 count: " + player2_generatedDeck.Count);
         inputManager.InitializeInputManager(_playerID);
+        if (replay != "")
+        {
+            inputManager.inputManager.ReadFromInputLog(replay);
+            seed = inputManager.inputManager.GetSeed();
+            _playerID = inputManager.inputManager.GetPOV();
+            inputManager.SetPlayerID(_playerID);
+        }
         //string luaPath = Application.dataPath + "/../lua";
         string luaPath = "C:/Users/Jason/Desktop/VanguardEngine/VanguardEngine/lua";
         cardFight = new VanguardEngine.CardFight();
@@ -222,6 +209,7 @@ public class CardFightManager : NetworkBehaviour
         cardFight._player1.OnLooking += PerformLooking;
         cardFight._player2.OnLooking += PerformLooking;
         cardFight._player1.OnUpdateValues += PerformUpdateValues;
+        cardFight.OnGameOver += OnGameOver;
         //cardFight._player2.OnShuffle += SendSeed;
         inputManager.inputManager.OnChosen += PerformChosen;
         cardFight.OnFree += PerformFree;
@@ -240,6 +228,7 @@ public class CardFightManager : NetworkBehaviour
         InitializeDecks(player1IDs.ToArray(), player2IDs.ToArray(), player1IDsRide.ToArray(), player2IDsRide.ToArray());
         PlaceStarter(cardFight._player1.Vanguard().id, cardFight._player1.Vanguard().tempID, cardFight._player2.Vanguard().id, cardFight._player2.Vanguard().tempID);
         StartCardFight(cardFight.StartFight);
+        Debug.Log("player id: " + _playerID);
         Debug.Log("cardfight started");
     }
 
@@ -247,6 +236,36 @@ public class CardFightManager : NetworkBehaviour
     {
         Thread newThread = new Thread(start);
         newThread.Start();
+    }
+
+    public void OnGameOver(object sender, CardEventArgs args)
+    {
+        OnGameOver(!(_playerID == args.i));
+    }
+
+    public void OnGameOver(bool loser)
+    {
+        IEnumerator Dialog()
+        {
+            IEnumerator Animation()
+            {
+                cardFight = null;
+                if (!loser)
+                    Debug.Log("You win.");
+                else
+                    Debug.Log("You lose.");
+                inputManager.GameOver();
+                yield return null;
+            }
+            animations.Add(Animation());
+            yield return null;
+        }
+        RpcCalls.Add(Dialog());
+    }
+
+    public void Surrender()
+    {
+        playerManager.CmdSurrender();
     }
 
     public void InitializeDecks(CardData[] player1Cards, CardData[] player2Cards, CardData[] player1RideCards, CardData[] player2RideCards)
@@ -453,6 +472,7 @@ public class CardFightManager : NetworkBehaviour
         GameObject newCard = null;
         int location = previousLocation;
         int FL = previousFL;
+        string locationName = "";
         Debug.Log("previous location: " + previousLocation + " current location: " + currentLocation);
         for (int i = 0; i < 2; i++)
         {
@@ -463,6 +483,7 @@ public class CardFightManager : NetworkBehaviour
             }
             if (location == Location.Deck)
             {
+                locationName = "Deck";
                 if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
@@ -480,6 +501,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.RideDeck)
             {
+                locationName = "Ride Deck";
                 Debug.Log("ride deck here");
                 if (_playerID == 1)
                 {
@@ -498,6 +520,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Hand)
             {
+                locationName = "Hand";
                 if (_playerID == 1)
                 {
                     if (card.originalOwner == 1)
@@ -515,6 +538,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Drop)
             {
+                locationName = "Drop";
                 Debug.Log("drop here");
                 if (_playerID == 1)
                 {
@@ -533,6 +557,12 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.VC || location == Location.RC || location == Location.Arm)
             {
+                if (location == Location.VC)
+                    locationName = "VC";
+                else if (location == Location.RC)
+                    locationName = "RC";
+                else if (location == Location.Arm)
+                    locationName = "Arm";
                 Debug.Log("vc/rc here");
                 zone = UnitSlots.GetComponent<UnitSlots>().GetUnitSlot(FL);
                 Debug.Log("FL: " + FL);
@@ -541,11 +571,13 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.GC)
             {
+                locationName = "GC";
                 Debug.Log("gc here");
                 zone = Globals.Instance.guardianCircle.gameObject;
             }
             else if (location == Location.Trigger)
             {
+                locationName = "Trigger Zone";
                 Debug.Log("trigger here");
                 if (isPlayerAction(card.originalOwner))
                     zone = Globals.Instance.playerTriggerZone;
@@ -554,6 +586,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Damage)
             {
+                locationName = "Damage Zone";
                 Debug.Log("damage here");
                 if (isPlayerAction(card.originalOwner))
                     zone = Globals.Instance.playerDamageZone;
@@ -562,16 +595,22 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Soul || location == Location.originalDress)
             {
+                if (location == Location.Soul)
+                    locationName = "Soul";
+                else if (location == Location.originalDress)
+                    locationName = "originalDress";
                 Debug.Log("soul/oD here");
                 zone = Globals.Instance.unitSlots.GetUnitSlot(FL);
             }
             else if (location == Location.OrderArea)
             {
+                locationName = "Order Area";
                 Debug.Log("order area here");
                 zone = Globals.Instance.orderArea;
             }
             else if (location == Location.Order)
             {
+                locationName = "Order Zone";
                 Debug.Log("order zone here");
                 if (isPlayerAction(card.originalOwner))
                 {
@@ -590,6 +629,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == Location.Bind)
             {
+                locationName = "Bind Zone";
                 Debug.Log("bind zone here");
                 if (isPlayerAction(card.originalOwner))
                     zone = Globals.Instance.playerBindZone.gameObject;
@@ -598,6 +638,7 @@ public class CardFightManager : NetworkBehaviour
             }
             else if (location == -1)
             {
+                locationName = "???";
                 Debug.Log("other location here");
                 zone = null;
                 //GameObject removed = GameObject.Find(card.tempID.ToString());
@@ -898,6 +939,7 @@ public class CardFightManager : NetworkBehaviour
         Globals.Instance.playerMiscStats.SetWorld(Globals.Instance.playerOrderZone.GetComponent<Pile>().GetCards());
         Globals.Instance.enemyMiscStats.SetWorld(Globals.Instance.enemyOrderZone.GetComponent<Pile>().GetCards());
         inputManager.cardsAreHoverable = true;
+        Globals.Instance.logWindow.AddLogItem(isPlayerAction(card.originalOwner), cardID, Location.GetName(previousLocation), true, "To " + Location.GetName(currentLocation), "", "");
         inAnimation = false;
     }
 
@@ -965,21 +1007,27 @@ public class CardFightManager : NetworkBehaviour
     public void ShowAbilityActivated(object sender, CardEventArgs e)
     {
         Debug.Log("ShowAbilityActivated");
+        CardFight cardFight = sender as CardFight;
+        string location = Location.GetName(cardFight._player1.GetLocation(e.card));
+        string description = e.abilityText;
         IEnumerator Dialog()
         {
-            ShowAbilityActivated(e.card.tempID, e.card.id, e.card.name);
+            ShowAbilityActivated(e.card, location, description);
             yield return null;
         }
         RpcCalls.Add(Dialog());
     }
 
-    public void ShowAbilityActivated(int tempID, string cardID, string name)
+    public void ShowAbilityActivated(Card card, string location, string description)
     {
-        animations.Add(ShowAbilityActivatedRoutine(tempID, cardID, name));
+        animations.Add(ShowAbilityActivatedRoutine(card, location, description));
     }
 
-    IEnumerator ShowAbilityActivatedRoutine(int tempID, string cardID, string name)
+    IEnumerator ShowAbilityActivatedRoutine(Card card, string location, string description)
     {
+        int tempID = card.tempID;
+        string cardID = card.id;
+        string name = card.name;
         GameObject target = GameObject.Find(tempID.ToString());
         bool abilityBoxAnimation = true;
         bool sliding = false;
@@ -1071,6 +1119,9 @@ public class CardFightManager : NetworkBehaviour
         }
         while (abilityBoxAnimation)
             yield return null;
+        Globals.Instance.logWindow.AddLogItem(isPlayerAction(card.originalOwner), cardID, location, true, "Ability activated", "", "");
+        if (description != "")
+            Globals.Instance.logWindow.AddLogItem(isPlayerAction(card.originalOwner), description);
         inAnimation = false;
     }
 
@@ -1118,9 +1169,11 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
+        int player = cardFight._actingPlayer._playerID;
+        int turn = cardFight._turn;
         IEnumerator Dialog()
         {
-            ChangePhase(Phase.Draw, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Draw, player, turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1134,9 +1187,11 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
+        int player = cardFight._actingPlayer._playerID;
+        int turn = cardFight._turn;
         IEnumerator Dialog()
         {
-            ChangePhase(Phase.Stand, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Stand, player, turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1150,13 +1205,15 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
+        int player = cardFight._actingPlayer._playerID;
+        int turn = cardFight._turn;
         if (isPlayerAction(cardFight._actingPlayer._playerID))
             Debug.Log("my turn");
         else
             Debug.Log("their turn");
         IEnumerator Dialog()
         {
-            ChangePhase(Phase.Ride, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Ride, player, turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1170,9 +1227,11 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
+        int player = cardFight._actingPlayer._playerID;
+        int turn = cardFight._turn;
         IEnumerator Dialog()
         {
-            ChangePhase(Phase.Main, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Main, player, turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1186,9 +1245,11 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with sender");
             return;
         }
+        int player = cardFight._actingPlayer._playerID;
+        int turn = cardFight._turn;
         IEnumerator Dialog()
         {
-            ChangePhase(Phase.Battle, cardFight._actingPlayer._playerID, cardFight._turn);
+            ChangePhase(Phase.Battle, player, turn);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1219,11 +1280,15 @@ public class CardFightManager : NetworkBehaviour
         int booster = -1;
         if (player.Booster() != null)
             booster = player.GetCircle(player.Booster());
+        int attackingCircle = player.GetCircle(player.GetAttacker());
+        List<int> attackedCircles = new List<int>();
         foreach (Card card in player.GetAttackedCards())
+            attackedCircles.Add(player.GetCircle(card));
+        foreach (int attackedCircle in attackedCircles)
         {
             IEnumerator Dialog()
             {
-                PerformAttack(player.GetCircle(player.GetAttacker()), player.GetCircle(card), booster);
+                PerformAttack(attackingCircle, attackedCircle, booster);
                 yield return null;
             }
             RpcCalls.Add(Dialog());
@@ -1238,6 +1303,15 @@ public class CardFightManager : NetworkBehaviour
         if (Globals.Instance.unitSlots.GetUnitSlot(attackedCircle) != null)
         {
             UnitSlotBehavior unit = Globals.Instance.unitSlots.GetUnitSlot(attackedCircle).GetComponent<UnitSlotBehavior>();
+            if (unit == null)
+            {
+                IEnumerator Dummy()
+                {
+                    while (true)
+                        yield return null;
+                }
+                animations.Add(Dummy());
+            }
             animations.Add(Flash(unit._cardID, Int32.Parse(unit.unit.name)));
         }
         animations.Add(ShowAttack(attackingCircle, attackedCircle));
@@ -1303,9 +1377,10 @@ public class CardFightManager : NetworkBehaviour
             Debug.Log("error with cardeventargs");
             return;
         }
+        int circle = player.GetCircle(player.GetCard(e.i));
         IEnumerator Dialog()
         {
-            ChangeUpRight(player.GetCircle(player.GetCard(e.i)), e.upright);
+            ChangeUpRight(circle, e.upright);
             yield return null;
         }
         RpcCalls.Add(Dialog());
@@ -1333,7 +1408,6 @@ public class CardFightManager : NetworkBehaviour
     public void ChangeFaceUp(object sender, CardEventArgs e)
     {
         Debug.Log("flipping");
-        Player player = sender as Player;
         IEnumerator Dialog()
         {
             ChangeFaceUp(e.i, e.faceup);

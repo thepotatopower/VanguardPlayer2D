@@ -21,6 +21,7 @@ public class Globals : MonoBehaviour
     public GameObject deckMessageBoxPrefab;
     public GameObject selections;
     public GameObject selectionPrefab;
+    public GameObject cardFightManagerPrefab;
     public Pile playerOrderZone;
     public Pile enemyOrderZone;
     public Pile playerBindZone;
@@ -38,6 +39,7 @@ public class Globals : MonoBehaviour
     public CardBehavior callCard;
     public POWSLD POW;
     public POWSLD SLD;
+    public LogWindow logWindow;
     public Vector2 ResetPosition;
     public Vector2 POWPosition;
     public Vector2 SLDPosition;
@@ -50,11 +52,13 @@ public class Globals : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("Global");
         if (Instance != null)
         {
             Debug.Log("more than one instance");
             return;
         }
+        //cardFightManager = GameObject.Instantiate(cardFightManagerPrefab).GetComponent<CardFightManager>();
         Instance = this;
         ResetPosition = new Vector2(-10000, 0);
         POWPosition = new Vector2(-382, 0);

@@ -25,6 +25,7 @@ public class CardBehavior : MonoBehaviour
     public bool selected = false;
     public bool selectable = false;
     public bool inAnimation = false;
+    public string cardID = "";
     public IEnumerator coroutine;
     Vector3 position, rotation, scale, originalPosition;
 
@@ -35,8 +36,6 @@ public class CardBehavior : MonoBehaviour
 
     void Start()
     {
-        cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
-        inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
         ZoomIn = GameObject.Find("ZoomIn");
         CardName = GameObject.Find("CardName").GetComponent<Text>();
         CardEffect = GameObject.Find("CardEffect").GetComponent<Text>();
@@ -45,8 +44,21 @@ public class CardBehavior : MonoBehaviour
         canvas = GameObject.Find("MainCanvas").GetComponent<Canvas>();
     }
 
+    void CheckForManagers()
+    {
+        if (cardFightManager != null && inputManager != null)
+            return;
+        GameObject cardFight = GameObject.Find("CardFightManager");
+        GameObject input = GameObject.Find("InputManager");
+        if (cardFight != null)
+            cardFightManager = cardFight.GetComponent<CardFightManager>();
+        if (input != null)
+            inputManager = input.GetComponent<VisualInputManager>();
+    }
+
     public void DisplayCard()
     {
+        CheckForManagers();
         if (originalPosition == new Vector3(0, 0, 0))
             originalPosition = this.transform.position;
         if (card == null)
@@ -58,7 +70,10 @@ public class CardBehavior : MonoBehaviour
             else
             {
                 //int parsed = -1;
-                cardFightManager.DisplayCard(card.id, card.tempID);
+                if (card == null)
+                    cardFightManager.DisplayCard(cardID, -1);
+                else
+                    cardFightManager.DisplayCard(card.id, card.tempID);
                 //if (Int32.TryParse(this.name, out parsed))
                 //{
                 //    cardFightManager.DisplayCard(card.id, parsed);
@@ -172,6 +187,7 @@ public class CardBehavior : MonoBehaviour
 
     public IEnumerator Flip()
     {
+        CheckForManagers();
         Debug.Log("cardbehavior is flipping");
         inAnimation = true;
         float step = 400 * Time.deltaTime;

@@ -12,8 +12,7 @@ GameObject:
   - component: {fileID: 4354326557808745464}
   - component: {fileID: 4354326557808745465}
   - component: {fileID: 4354326557808745446}
-  - component: {fileID: 1888438375379630414}
-  - component: {fileID: 6789840745870797691}
+  - component: {fileID: 485773032}
   m_Layer: 5
   m_Name: EnemyHand
   m_TagString: Untagged
@@ -55,7 +54,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4354326557808745444}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -99,10 +98,10 @@ MonoBehaviour:
   m_StartCorner: 2
   m_StartAxis: 1
   m_CellSize: {x: 62, y: 86}
-  m_Spacing: {x: 3, y: 0}
+  m_Spacing: {x: 500, y: 0}
   m_Constraint: 2
   m_ConstraintCount: 1
---- !u!114 &1888438375379630414
+--- !u!114 &485773032
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -111,32 +110,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 4354326557808745444}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
+  m_Script: {fileID: 11500000, guid: 7efe26101ea107041a47dde8dc2bcf7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sceneId: 0
-  serverOnly: 0
-  visible: 0
-  m_AssetId: 
-  hasSpawned: 0
---- !u!114 &6789840745870797691
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4354326557808745444}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2f74aedd71d9a4f55b3ce499326d45fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncMode: 0
-  syncInterval: 0.1
-  clientAuthority: 0
-  localPositionSensitivity: 0.01
-  localRotationSensitivity: 0.01
-  localScaleSensitivity: 0.01
-  compressRotation: 0
-  interpolateScale: 1
-  syncScale: 1
+  hand: {fileID: 4354326557808745444}
+  inAnimation: 0

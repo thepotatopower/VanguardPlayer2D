@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using PlayFab.Networking;
 using Mirror;
 
-public class LobbyManager : NetworkBehaviour
+public class LobbyManager : MonoBehaviour
 {
     public string PlayerName = "Anonymous";
     public InputField inputField;
@@ -21,9 +21,13 @@ public class LobbyManager : NetworkBehaviour
     public Button connectToHost;
     public Button hostButton;
     public Button joinButton;
+    public Button refreshButton;
     public GameObject hostList;
     public GameObject scrollList;
     public PlayerManager playerManager;
+    public bool connected = false;
+    public int hostId = -1;
+    public int clientId = -1;
 
     // Start is called before the first frame update
     void Start()
@@ -56,10 +60,12 @@ public class LobbyManager : NetworkBehaviour
         joinButton.gameObject.SetActive(false);
         if (!hosting)
         {
-            playerManager.CmdGetHosts(playerManager.GetComponent<NetworkIdentity>());
             scrollList.gameObject.SetActive(true);
             connectToHost.gameObject.SetActive(true);
+            refreshButton.gameObject.SetActive(true);
+            RefreshHosts();
         }
+        connected = true;
     }
 
     public string GetName()
@@ -69,10 +75,15 @@ public class LobbyManager : NetworkBehaviour
         return input.text;
     }
 
-    [TargetRpc]
-    public void TargetGetHosts(NetworkConnection conn, List<string> names, List<int> ids)
+    public void RefreshHosts()
+    {
+        playerManager.CmdGetHosts(playerManager.GetComponent<NetworkIdentity>());
+    }
+
+    public void GetHosts(List<string> names, List<int> ids)
     {
         ResetLobbyItems();
+        Debug.Log(names.Count);
         for (int i = 0; i < names.Count; i++)
             Hosts[names[i]] = ids[i];
         foreach (string key in Hosts.Keys)
@@ -119,7 +130,16 @@ public class LobbyManager : NetworkBehaviour
     {
         if (selectedLobbyItem != null)
         {
-            playerManager.CmdBeginFight(selectedLobbyItem.connectionId, this.GetComponent<NetworkIdentity>());
+            Debug.Log("connecting to host: " + selectedLobbyItem.connectionId);
+            //playerManager.CmdConnectToHost(selectedLobbyItem.connectionId, playerManager.gameObject);
+            playerManager.CmdBeginFight(selectedLobbyItem.connectionId, playerManager.gameObject);
         }
+    }
+
+    public void EstablishRoom(int host, int client)
+    {
+        Debug.Log("hostId: " + host + " clientId: " + client);
+        hostId = host;
+        clientId = client;
     }
 }

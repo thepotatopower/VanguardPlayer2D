@@ -6,13 +6,14 @@ using UnityEngine.SceneManagement;
 
 public class Communicator : NetworkBehaviour
 {
+    public PlayerManager playerManager;
     public MyNetworkManager myNetworkManager;
-    public GameObject cardFightManagerPrefab;
 
     // Start is called before the first frame update
     void Start()
     {
         GameObject.DontDestroyOnLoad(this);
+        this.enabled = true;
     }
 
     // Update is called once per frame
@@ -21,17 +22,15 @@ public class Communicator : NetworkBehaviour
         
     }
 
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        this.enabled = true;
+    }
+
     [TargetRpc]
     public void TargetDisconnectClient(NetworkConnection target)
     {
         myNetworkManager.StopClient();
-    }
-
-    [TargetRpc]
-    public void TargetBeginFight(NetworkConnection target)
-    {
-        SceneManager.LoadScene("SampleScene");
-        Debug.Log("instantiating");
-        GameObject.Instantiate(cardFightManagerPrefab);
     }
 }

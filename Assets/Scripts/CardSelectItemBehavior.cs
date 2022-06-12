@@ -19,17 +19,22 @@ public class CardSelectItemBehavior : MonoBehaviour
     void Start()
     {
         inputManager = GameObject.Find("InputManager").GetComponent<VisualInputManager>();
-        cardFightManager = GameObject.Find("CardFightManager").GetComponent<CardFightManager>();
         //cardSelect = GameObject.Find("CardSelect").GetComponent<CardSelect>();
         defaultColor = this.GetComponent<Image>().color;
     }
 
     public void OnPointerEnter()
     {
-        cardFightManager.DisplayCard(cardID, tempID);
-        if (!selected)
-            this.GetComponent<Image>().color = new Color32(195, 243, 250, 255);
-        cardSelect.description = description;
+        if (cardFightManager == null)
+        {
+            GameObject manager = GameObject.Find("CardFightManager");
+            if (manager != null)
+                cardFightManager = manager.GetComponent<CardFightManager>();
+            cardFightManager.DisplayCard(cardID, tempID);
+            if (!selected)
+                this.GetComponent<Image>().color = new Color32(195, 243, 250, 255);
+            cardSelect.description = description;
+        }
     }
 
     public void OnPointerExit()

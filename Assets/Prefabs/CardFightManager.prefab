@@ -9,8 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6425462965943406766}
-  - component: {fileID: 1110599863046296579}
-  - component: {fileID: 8318326558302090830}
   - component: {fileID: -5455194655590020074}
   m_Layer: 0
   m_Name: CardFightManager
@@ -33,44 +31,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1110599863046296579
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6862994184496001989}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sceneId: 0
-  serverOnly: 0
-  visible: 0
-  m_AssetId: 
-  hasSpawned: 0
---- !u!114 &8318326558302090830
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6862994184496001989}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2f74aedd71d9a4f55b3ce499326d45fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  syncMode: 0
-  syncInterval: 0.1
-  clientAuthority: 0
-  localPositionSensitivity: 0.01
-  localRotationSensitivity: 0.01
-  localScaleSensitivity: 0.01
-  compressRotation: 0
-  interpolateScale: 1
-  syncScale: 1
 --- !u!114 &-5455194655590020074
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -83,13 +43,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13fc21fa9e15ab047a7e83556d0a0c54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  syncMode: 0
-  syncInterval: 0.1
+  PhaseManager: {fileID: 0}
+  UnitSlots: {fileID: 0}
   Field: {fileID: 0}
   PlayerHand: {fileID: 0}
-  cardPrefab: {fileID: 0}
+  EnemyHand: {fileID: 0}
+  cardPrefab: {fileID: 7038585139010418014, guid: b33fbce7b74b99f4c9eac8eb6d010ca6, type: 3}
   DeckZone: {fileID: 0}
+  PlayerDropZone: {fileID: 0}
+  EnemyDropZone: {fileID: 0}
   HandCard: {fileID: 0}
   cardBehavior: {fileID: 0}
   PlayerDeckZone: {fileID: 0}
+  PlayerRideDeckZone: {fileID: 0}
   EnemyDeckZone: {fileID: 0}
+  EnemyRideDeckZone: {fileID: 0}
+  POW: {fileID: 0}
+  SLD: {fileID: 0}
+  playerManager: {fileID: 0}
+  inputManager: {fileID: 0}
+  SQLpath: 
+  namePath: 
+  inAnimation: 0
+  testValue: -1
+  shuffleCount: 0
+  _playerID: 0
+  _attacker: -1
+  _attacked: 
+  _booster: 0

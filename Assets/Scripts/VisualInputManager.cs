@@ -9,7 +9,7 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using System;
 
-public class VisualInputManager : NetworkBehaviour
+public class VisualInputManager : MonoBehaviour
 { 
     public Button rockButton;
     public Button scissorsButton;
@@ -51,31 +51,16 @@ public class VisualInputManager : NetworkBehaviour
     public PlayerManager playerManager;
     public CardFightManager cardFightManager;
     public Queue<Inputs> inputQueue = new Queue<Inputs>();
-    [SyncVar]
     public int count = 0;
-    //[SyncVar]
-    //public int player1_input = -1;
-    //[SyncVar]
-    //public int player2_input = -1;
-    //[SyncVar(hook = nameof(OnInputSignalChanged))]
     public int inputSignal = -1;
-    [SyncVar]
     public int numResponses = 0;
-    [SyncVar]
     public bool readyToContinue = false;
-    [SyncVar]
     public int min = 0;
-    [SyncVar]
     public string query = "";
-    [SyncVar]
     public bool bool1 = false;
-    [SyncVar]
     public int int1 = 0;
-    [SyncVar]
     public int int2 = 0;
-    [SyncVar]
     public string string1 = "";
-    [SyncVar]
     public int actingPlayer = 1;
     public List<int> tempIDs = new List<int>();
     public List<int> tempIDs2 = new List<int>();
@@ -585,11 +570,6 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
-    public override void OnStartServer()
-    {
-        readyToContinue = false;
-    }
-
     // VanguardPlayer2D's InputManager logic
     void Start()
     {
@@ -798,6 +778,12 @@ public class VisualInputManager : NetworkBehaviour
         }
     }
 
+    public void GameOver()
+    {
+        StopCoroutine(currentRoutine);
+        StartCoroutine(ResetInputs());
+    }
+
     public void UpdateInputSignal(int newInputSignal, int player)
     {
         IEnumerator Dialog()
@@ -890,10 +876,17 @@ public class VisualInputManager : NetworkBehaviour
     public IM InitializeInputManager(int playerID)
     {
         inputManager = new IM();
+        string directory = Application.dataPath + "/../Replays/";
+        inputManager.SetReplayDirectory(directory);
         inputManager.inputManager = this;
         _playerID = playerID;
 
         return inputManager;
+    }
+
+    public void SetPlayerID(int playerID)
+    {
+        _playerID = playerID;
     }
 
     IEnumerator RPSInput()
@@ -965,8 +958,6 @@ public class VisualInputManager : NetworkBehaviour
     {
         NetworkIdentity networkIdentity = NetworkClient.connection.identity;
         playerManager = networkIdentity.GetComponent<PlayerManager>();
-        Button player_selection;
-        Button enemy_selection;
         messageBox.transform.position = new Vector3(10000, 0, 0);
         //if (_playerID == 1)
         //{
@@ -1034,6 +1025,7 @@ public class VisualInputManager : NetworkBehaviour
             messageBox.transform.GetChild(0).GetComponent<Text>().text = "Select cards to mulligan.";
             mulliganButton.transform.localPosition = new Vector3(0, -110, 0);
             cardsAreSelectable = true;
+            waitForButton = new WaitForUIButtons();
             waitForButton.AddButton(mulliganButton);
             Debug.Log("waiting for button");
             while (selection < 0)
